@@ -1,0 +1,70 @@
+[
+{
+"asset_id": "TX-401",
+"substation_id": "SUB-METRO-09",
+"model": "Siemens 345kV/138kV 400MVA Autotransformer",
+"age_years": 24,
+"oil_temp_c": 108.5,
+"winding_temp_c": 122.0,
+"vibration_mms": 8.4,
+"load_pct": 94.0,
+"dga_ppm": {
+"hydrogen": 320,
+"methane": 410,
+"ethane": 95,
+"ethylene": 280,
+"acetylene": 85
+}
+},
+{
+"asset_id": "TX-102",
+"substation_id": "SUB-NORTH-01",
+"model": "ABB 230kV/69kV 150MVA Power Transformer",
+"age_years": 16,
+"oil_temp_c": 92.0,
+"winding_temp_c": 101.0,
+"vibration_mms": 5.1,
+"load_pct": 78.0,
+"dga_ppm": {
+"hydrogen": 110,
+"methane": 140,
+"ethane": 30,
+"ethylene": 80,
+"acetylene": 12
+}
+},
+{
+"asset_id": "TX-205",
+"substation_id": "SUB-WEST-02",
+"model": "GE 138kV/13.8kV 60MVA Substation Transformer",
+"age_years": 9,
+"oil_temp_c": 72.0,
+"winding_temp_c": 79.0,
+"vibration_mms": 2.2,
+"load_pct": 55.0,
+"dga_ppm": {
+"hydrogen": 25,
+"methane": 18,
+"ethane": 8,
+"ethylene": 12,
+"acetylene": 0
+}
+},
+{
+"asset_id": "TX-303",
+"substation_id": "SUB-EAST-04",
+"model": "Westinghouse 115kV/13.2kV 45MVA Transformer",
+"age_years": 31,
+"oil_temp_c": 88.0,
+"winding_temp_c": 96.0,
+"vibration_mms": 4.8,
+"load_pct": 82.0,
+"dga_ppm": {
+"hydrogen": 95,
+"methane": 90,
+"ethane": 40,
+"ethylene": 65,
+"acetylene": 8
+}
+}
+]
