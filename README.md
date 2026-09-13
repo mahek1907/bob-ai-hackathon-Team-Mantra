@@ -155,16 +155,16 @@ The generated recommendation may include:
 
 ### 7. Interactive Diagnostic Dashboard
 
-The Streamlit dashboard provides:
+The React + Vite single-page dashboard provides:
 
-- Summary metrics
-- Risk distribution charts
-- Transformer ranking tables
-- DGA breakdowns
-- Weather severity indicators
-- Grid criticality information
-- Recommended response actions
-- Exportable diagnostic information
+- High-level KPI metric cards (active assets, critical alerts, weather severity factor, critical customer load)
+- Animated risk score gauges and severity badges (Critical, High, Medium, Low)
+- Filterable and sortable transformer fleet matrix
+- Expandable IEEE C57.104 DGA gas breakdown (H2, CH4, C2H6, C2H4, C2H2)
+- Dynamic weather severity and compounding multiplier panel
+- Grid criticality infrastructure impact view (hospitals, water treatment, rail transit)
+- Interactive IBM Granite 3.0 emergency work-order dispatch drawer
+- Human-in-the-loop countersign approval workflow and exportable directives
 
 ---
 
@@ -188,10 +188,11 @@ The project separates numerical analysis from generative AI:
 
 | Category | Technologies |
 |---|---|
-| **Programming Language** | Python 3.10+ |
-| **Application Framework** | Streamlit |
+| **Programming Languages** | Python 3.10+, JavaScript / TypeScript |
+| **Backend Framework** | FastAPI, Uvicorn, Pydantic |
+| **Frontend Framework** | React 18, Vite, Tailwind CSS, Lucide Icons |
 | **Data Processing** | Pandas |
-| **Visualization** | Plotly |
+| **Visualization** | Recharts, SVG Gauges |
 | **AI Development Environment** | IBM BoB IDE |
 | **Generative AI** | IBM watsonx.ai and IBM Granite 3.0 |
 | **Data Storage** | JSON structured telemetry files |
@@ -205,16 +206,15 @@ The project separates numerical analysis from generative AI:
 
 ```mermaid
 graph TD
-    A["Transformer Telemetry JSON"] --> C["Data Processing Layer"]
-    B["Weather and Grid Data JSON"] --> C
-    C --> D["Engineering Risk and DGA Engine"]
-    D --> E["Weather Severity Engine"]
-    E --> F["Grid Criticality Engine"]
-    F --> G["Risk Prioritization: 0–100"]
-    G --> H["IBM Granite through watsonx.ai"]
-    H --> I["Streamlit Dashboard"]
-    I --> J["Human Operator Review"]
-    J --> K["Work-Order Draft and Export"]
+    A["Operator / Browser"] -->|"Interactive UI"| B["React Frontend (Vite + Tailwind)"]
+    B -->|"REST API Calls"| C["FastAPI Server (src/server.py)"]
+    C --> D["Risk & DGA Engine (IEEE C57.104)"]
+    C --> E["Weather Severity & Criticality Engines"]
+    C --> F["IBM Granite 3.0 via watsonx.ai"]
+    C --> G["JSON Telemetry Files (SCADA Simulation)"]
+    F -->|"Draft Work Order"| C
+    C -->|"JSON Response"| B
+    B -->|"Operator Review & Countersign"| H["Approved Dispatch Directive"]
 ```
 
 ---
@@ -224,35 +224,43 @@ graph TD
 ```text
 bob-ai-hackathon-Team-Mantra/
 │
-├── src/
-│   ├── app.py
-│   ├── dga_engine.py
-│   ├── weather_engine.py
-│   ├── criticality_engine.py
-│   ├── risk_engine.py
-│   ├── work_order_generator.py
-│   ├── data/
+├── frontend/                     ← React 18 + Vite single-page dashboard
+│   ├── src/
+│   │   ├── components/           ← KPI cards, Asset table, Modal, Gauges
+│   │   ├── App.jsx               ← Main interactive dashboard view
+│   │   └── index.css             ← Tailwind CSS styling
+│   ├── package.json
+│   └── vite.config.js
+│
+├── src/                          ← Backend API and analytical engines
+│   ├── server.py                 ← FastAPI application and REST endpoints
+│   ├── dga_engine.py             ← IEEE C57.104 dissolved gas analysis
+│   ├── weather_engine.py         ← Meteorological compounding multiplier
+│   ├── criticality_engine.py     ← Substation grid impact scoring
+│   ├── risk_engine.py            ← Composite risk ranking engine
+│   ├── work_order_generator.py   ← IBM Granite 3.0 watsonx.ai integration
+│   ├── data/                     ← Simulated SCADA telemetry datasets
 │   │   ├── transformer_telemetry.json
 │   │   ├── weather_data.json
 │   │   └── grid_criticality.json
-│   └── requirements.txt
+│   └── requirements.txt          ← Python dependencies
 │
-├── docs/
+├── docs/                         ← Hackathon documentation
 │   ├── problem-statement.md
 │   ├── solution-overview.md
 │   ├── architecture.md
 │   └── setup-guide.md
 │
-├── demo/
+├── demo/                         ← Video and deployed demo links
 │   ├── screenshots/
 │   ├── demo-video-link.txt
 │   └── live-demo-url.txt
 │
-├── presentation/
+├── presentation/                 ← Hackathon presentation deck
 │   └── slides.pdf
 │
-├── submission.yaml
-└── README.md
+├── submission.yaml               ← Hackathon evaluation metadata
+└── README.md                     ← Project documentation entry point
 ```
 
 ---
@@ -266,52 +274,51 @@ git clone https://github.com/mahek1907/bob-ai-hackathon-Team-Mantra.git
 cd bob-ai-hackathon-Team-Mantra
 ```
 
-### 2. Create a Virtual Environment
+### 2. Backend Setup (FastAPI)
 
 ```bash
+# Create and activate virtual environment
 python -m venv venv
-```
 
-### 3. Activate the Virtual Environment
-
-#### Windows
-
-```powershell
+# Windows
 .\venv\Scripts\activate
-```
+# Linux/macOS: source venv/bin/activate
 
-#### Linux or macOS
-
-```bash
-source venv/bin/activate
-```
-
-### 4. Install Dependencies
-
-```bash
+# Install backend dependencies
 pip install -r src/requirements.txt
+
+# Start the FastAPI backend server
+uvicorn src.server:app --reload --port 8000
 ```
 
-### 5. Run the Streamlit Application
+The API will be available at `http://localhost:8000` (API documentation at `http://localhost:8000/docs`).
+
+### 3. Frontend Setup (React + Vite)
+
+In a separate terminal:
 
 ```bash
-streamlit run src/app.py
+cd frontend
+npm install
+npm run dev
 ```
 
-The application will open in your browser using the local Streamlit address displayed in the terminal.
+The interactive dashboard will open at `http://localhost:5173`.
 
 ---
 
-## 📦 Example Dependencies
+## 📦 Dependencies
 
-The `src/requirements.txt` file may contain:
+The backend requirements (`src/requirements.txt`):
 
 ```text
-streamlit
-pandas
-plotly
-requests
-python-dotenv
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+pytest>=8.0.0
+ibm-watsonx-ai>=1.0.0
 ```
 
 Additional IBM SDK or API dependencies may be required depending on the selected IBM watsonx.ai integration method.

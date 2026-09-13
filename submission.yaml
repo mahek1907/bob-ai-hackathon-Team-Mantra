@@ -42,14 +42,14 @@ submission:
     - "Dynamic weather severity compounding multiplier factoring wind gusts and heatwave stress"
     - "Topological grid impact scoring (0-100) prioritizing critical loads like hospitals and transit"
     - "Autonomous emergency crew pre-positioning and staging work-order generation via IBM Granite 3.0"
-    - "Interactive diagnostic dashboard with real-time asset telemetry and one-click dispatch exports"
+    - "Interactive real-time React diagnostic dashboard with risk distribution visualizations, animated health gauges, and one-click dispatch exports"
     
   tech_stack:
-    languages: ["Python"]              # REQUIRED — exact languages used in src/
-    frameworks: ["Streamlit", "Pandas", "Plotly"]
+    languages: ["Python", "JavaScript"]              # REQUIRED — exact languages used in src/
+    frameworks: ["FastAPI", "React", "TailwindCSS", "Recharts"]
     ibm_technologies: ["IBM Bob IDE", "IBM watsonx.ai", "IBM Granite 3.0"]
     databases: ["JSON Data Store"]
-    other: ["IEEE C57.104 Standard", "GitHub Actions"]
+    other: ["IEEE C57.104 Standard", "Vite", "GitHub Actions"]
     
   what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
     We are most proud of bridging the gap between rigorous IEEE C57.104 electrical engineering
