@@ -414,3 +414,169 @@ def test_determinism():
     res2 = calculate_weather_factor(88.0, weather)
 
     assert res1 == res2
+
+
+# =============================================================================
+# 24. EXACT PERSON 2 WEATHER SCHEMA (TROPICAL STORM ALEX)
+# =============================================================================
+
+def test_person2_exact_weather_data_json():
+    """Verify exact payload from src/data/weather_data.json compounds properly to 1.50 cap."""
+    weather = {
+        "event_name": "Tropical Storm Alex & Heatwave Inflow",
+        "ambient_temp_c": 39.4,
+        "wind_speed_kmh": 85.0,
+        "lightning_strikes_last_hour": 42,
+        "storm_severity_index": 8.5,
+        "heatwave_alert": True,
+    }
+    # For severe oil temperature 108.5 C (TX-401)
+    result = calculate_weather_factor(108.5, weather)
+
+    assert result["weather_multiplier"] == 1.5
+    alerts = [a.lower() for a in result["weather_alerts"]]
+    # Verify expected severe weather alerts
+    assert any("ambient temperature" in a for a in alerts)
+    assert any("heatwave" in a for a in alerts)
+    assert any("wind" in a for a in alerts)
+    assert any("lightning" in a for a in alerts)
+    assert any("extreme storm" in a for a in alerts)
+    assert any("cooling" in a or "cooling barrier" in a for a in alerts)
+
+
+# =============================================================================
+# 25. AMBIENT TEMPERATURE ALIAS (ambient_temp_c)
+# =============================================================================
+
+def test_ambient_temp_c_thresholds():
+    """Verify ambient_temp_c alias functions identically across normal, elevated, and severe tiers."""
+    res_normal = calculate_weather_factor(60.0, {"ambient_temp_c": 25.0})
+    res_elevated = calculate_weather_factor(60.0, {"ambient_temp_c": 36.5})
+    res_severe = calculate_weather_factor(60.0, {"ambient_temp_c": 43.5})
+
+    assert res_normal["weather_multiplier"] == 1.0
+    assert res_elevated["weather_multiplier"] == 1.05
+    assert res_severe["weather_multiplier"] == 1.10
+    assert any("ambient temperature" in a.lower() for a in res_elevated["weather_alerts"])
+    assert any("severe ambient" in a.lower() for a in res_severe["weather_alerts"])
+
+
+# =============================================================================
+# 26. WIND SPEED ALIAS (wind_speed_kmh)
+# =============================================================================
+
+def test_wind_speed_kmh_thresholds():
+    """Verify wind_speed_kmh alias functions identically across elevated, high, and severe tiers."""
+    res_elevated = calculate_weather_factor(60.0, {"wind_speed_kmh": 60.0})
+    res_high = calculate_weather_factor(60.0, {"wind_speed_kmh": 85.0})
+    res_severe = calculate_weather_factor(60.0, {"wind_speed_kmh": 115.0})
+
+    assert res_elevated["weather_multiplier"] == 1.04
+    assert res_high["weather_multiplier"] == 1.08
+    assert res_severe["weather_multiplier"] == 1.12
+    assert any("elevated wind" in a.lower() for a in res_elevated["weather_alerts"])
+    assert any("high wind" in a.lower() for a in res_high["weather_alerts"])
+    assert any("severe wind" in a.lower() for a in res_severe["weather_alerts"])
+
+
+# =============================================================================
+# 27. LIGHTNING ALIAS (lightning_strikes_last_hour)
+# =============================================================================
+
+def test_lightning_strikes_last_hour_thresholds():
+    """Verify lightning_strikes_last_hour alias handles moderate and saturated counts."""
+    # Moderate activity (strike count 4 -> index 4.0 in moderate tier [3.0, 6.0))
+    res_mod = calculate_weather_factor(60.0, {"lightning_strikes_last_hour": 4})
+    assert res_mod["weather_multiplier"] == 1.04
+    assert any("moderate lightning" in a.lower() for a in res_mod["weather_alerts"])
+
+    # High strike count (42 strikes -> saturates at 10.0 in severe tier [9.0, 10.0])
+    res_sat = calculate_weather_factor(60.0, {"lightning_strikes_last_hour": 42})
+    assert res_sat["weather_multiplier"] == 1.12
+    assert any("severe lightning" in a.lower() for a in res_sat["weather_alerts"])
+
+
+# =============================================================================
+# 28. NUMERIC STORM SEVERITY INDEX
+# =============================================================================
+
+def test_numeric_storm_severity_tiers():
+    """Verify numeric storm severity indexes across <3.0, >=3.0, >=5.0, >=8.0 tiers."""
+    res_none = calculate_weather_factor(60.0, {"storm_severity_index": 2.5})
+    res_watch = calculate_weather_factor(60.0, {"storm_severity_index": 3.0})
+    res_warn = calculate_weather_factor(60.0, {"storm_severity_index": 5.0})
+    res_extreme = calculate_weather_factor(60.0, {"storm_severity_index": 8.5})
+
+    assert res_none["weather_multiplier"] == 1.0
+    assert not any("storm" in a.lower() for a in res_none["weather_alerts"])
+
+    assert res_watch["weather_multiplier"] == 1.04
+    assert any("storm watch" in a.lower() for a in res_watch["weather_alerts"])
+
+    assert res_warn["weather_multiplier"] == 1.08
+    assert any("severe storm warning" in a.lower() for a in res_warn["weather_alerts"])
+
+    assert res_extreme["weather_multiplier"] == 1.12
+    assert any("extreme storm alert" in a.lower() for a in res_extreme["weather_alerts"])
+
+
+@pytest.mark.parametrize("bad_numeric_storm", [-5.0, float("nan"), float("inf"), float("-inf"), "invalid"])
+def test_numeric_storm_severity_invalid_values_safe(bad_numeric_storm):
+    """Verify negative, NaN, Inf, and invalid numeric storm indexes do not crash or add alerts."""
+    result = calculate_weather_factor(60.0, {"storm_severity_index": bad_numeric_storm})
+
+    assert result["weather_multiplier"] == 1.0
+    assert not any("storm" in a.lower() for a in result["weather_alerts"])
+
+
+# =============================================================================
+# 29. ALIAS PRECEDENCE & NO DOUBLE COUNTING
+# =============================================================================
+
+def test_ambient_alias_precedence_no_double_counting():
+    """Verify providing both ambient_temperature and ambient_temp_c does not double count."""
+    weather = {
+        "ambient_temperature": 36.5,
+        "ambient_temp_c": 44.0,
+    }
+    result = calculate_weather_factor(60.0, weather)
+
+    # Must take ambient_temperature (+0.05), NOT +0.10 and NOT sum (+0.15)
+    assert result["weather_multiplier"] == 1.05
+
+
+def test_wind_alias_precedence_no_double_counting():
+    """Verify providing both wind_gust_speed and wind_speed_kmh does not double count."""
+    weather = {
+        "wind_gust_speed": 60.0,       # +0.04
+        "wind_speed_kmh": 115.0,       # +0.12
+    }
+    result = calculate_weather_factor(60.0, weather)
+
+    # Must take wind_gust_speed (+0.04)
+    assert result["weather_multiplier"] == 1.04
+
+
+def test_lightning_alias_precedence_no_double_counting():
+    """Verify providing both lightning_activity and lightning_strikes_last_hour does not double count."""
+    weather = {
+        "lightning_activity": 4.0,              # +0.04
+        "lightning_strikes_last_hour": 50,      # +0.12
+    }
+    result = calculate_weather_factor(60.0, weather)
+
+    # Must take lightning_activity (+0.04)
+    assert result["weather_multiplier"] == 1.04
+
+
+def test_storm_alias_precedence_no_double_counting():
+    """Verify providing both storm_severity and storm_severity_index does not double count."""
+    weather = {
+        "storm_severity": "WATCH",          # +0.04
+        "storm_severity_index": 8.5,        # +0.12
+    }
+    result = calculate_weather_factor(60.0, weather)
+
+    # Must take storm_severity (+0.04)
+    assert result["weather_multiplier"] == 1.04
+

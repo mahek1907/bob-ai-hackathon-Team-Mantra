@@ -116,6 +116,42 @@ def _normalize_lightning(raw_lightning: Any) -> Optional[float]:
     return min(10.0, parsed)
 
 
+def _extract_aliased_float(source: Dict[str, Any], aliases: List[str]) -> Optional[float]:
+    """
+    Extract first valid parsed float value across ordered list of key aliases.
+    Stops at the first alias present in source that yields a valid finite float.
+    """
+    for alias in aliases:
+        if alias in source:
+            parsed = _parse_float(source[alias])
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def _extract_aliased_lightning(source: Dict[str, Any], aliases: List[str]) -> Optional[float]:
+    """
+    Extract first valid lightning reading across ordered key aliases and normalize to 0.0-10.0 index.
+    Stops at the first alias present in source that yields a valid normalized float.
+    """
+    for alias in aliases:
+        if alias in source:
+            normalized = _normalize_lightning(source[alias])
+            if normalized is not None:
+                return normalized
+    return None
+
+
+def _extract_aliased_storm(source: Dict[str, Any], aliases: List[str]) -> Any:
+    """
+    Extract first present non-None storm severity reading across ordered aliases.
+    """
+    for alias in aliases:
+        if alias in source and source[alias] is not None:
+            return source[alias]
+    return None
+
+
 # =============================================================================
 # PRIVATE HELPER FUNCTIONS: HAZARD EVALUATORS
 # =============================================================================
@@ -190,19 +226,56 @@ def _eval_lightning_hazard(lightning_index: Optional[float], alerts: List[str]) 
 
 
 def _eval_storm_severity(storm_severity_raw: Any, alerts: List[str]) -> float:
-    """Evaluate categorical storm severity rating."""
-    if not isinstance(storm_severity_raw, str):
+    """
+    Evaluate categorical or numeric storm severity rating.
+
+    Supports:
+    - Categorical strings: "NONE", "WATCH", "WARNING", "EXTREME"
+    - Numeric index (0.0 to 10.0 demo scale):
+        >= 8.0 -> EXTREME (+0.12)
+        >= 5.0 -> WARNING (+0.08)
+        >= 3.0 -> WATCH   (+0.04)
+        <  3.0 -> NONE    (+0.00)
+    """
+    if storm_severity_raw is None or isinstance(storm_severity_raw, bool):
         return 0.0
 
-    severity = storm_severity_raw.strip().upper()
+    # Categorical string matching
+    if isinstance(storm_severity_raw, str):
+        severity = storm_severity_raw.strip().upper()
+        if severity == "EXTREME":
+            alerts.append("Extreme storm alert - severe multi-hazard meteorological event")
+            return STORM_EXTREME_MULT
+        elif severity == "WARNING":
+            alerts.append("Severe storm warning active in substation sector")
+            return STORM_WARNING_MULT
+        elif severity == "WATCH":
+            alerts.append("Storm watch active - potential adverse weather development")
+            return STORM_WATCH_MULT
+        elif severity == "NONE":
+            return 0.0
+        # If string is numeric (e.g. "8.5"), attempt numeric evaluation
+        num_val = _parse_float(storm_severity_raw)
+        if num_val is None:
+            return 0.0
+    elif isinstance(storm_severity_raw, (int, float)):
+        num_val = _parse_float(storm_severity_raw)
+        if num_val is None:
+            return 0.0
+    else:
+        return 0.0
 
-    if severity == "EXTREME":
+    # Numeric index evaluation
+    if num_val < 0.0:
+        return 0.0
+
+    if num_val >= 8.0:
         alerts.append("Extreme storm alert - severe multi-hazard meteorological event")
         return STORM_EXTREME_MULT
-    elif severity == "WARNING":
+    elif num_val >= 5.0:
         alerts.append("Severe storm warning active in substation sector")
         return STORM_WARNING_MULT
-    elif severity == "WATCH":
+    elif num_val >= 3.0:
         alerts.append("Storm watch active - potential adverse weather development")
         return STORM_WATCH_MULT
 
@@ -277,12 +350,17 @@ def calculate_weather_factor(
     # 2. Parse transformer oil temperature safely (runtime guard against bad inputs)
     oil_temp_parsed = _parse_float(asset_oil_temp)
 
-    # 3. Extract and parse weather telemetry
-    ambient_temp = _parse_float(weather.get("ambient_temperature"))
-    wind_gust = _parse_float(weather.get("wind_gust_speed"))
-    lightning_norm = _normalize_lightning(weather.get("lightning_activity"))
+    # 3. Extract and parse weather telemetry across supported schema aliases
+    ambient_aliases = ["ambient_temperature", "ambient_temp_c", "ambient_temp"]
+    wind_aliases = ["wind_gust_speed", "wind_speed_kmh", "wind_speed", "wind_gust"]
+    lightning_aliases = ["lightning_activity", "lightning_strikes_last_hour", "lightning_strikes", "lightning"]
+    storm_aliases = ["storm_severity", "storm_severity_index", "storm_index"]
+
+    ambient_temp = _extract_aliased_float(weather, ambient_aliases)
+    wind_gust = _extract_aliased_float(weather, wind_aliases)
+    lightning_norm = _extract_aliased_lightning(weather, lightning_aliases)
     heatwave_flag = _parse_bool(weather.get("heatwave_alert"))
-    storm_severity = weather.get("storm_severity")
+    storm_severity = _extract_aliased_storm(weather, storm_aliases)
 
     # 4. Evaluate individual hazard increments
     heat_inc, has_env_heat = _eval_heat_hazard(ambient_temp, heatwave_flag, weather_alerts)
