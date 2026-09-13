@@ -14,14 +14,79 @@ except ImportError:
 WATSONX_API_KEY = os.getenv("WATSONX_API_KEY", "")
 WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID", "")
 WATSONX_URL = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+
+
+def _extract_asset_fields(top_asset: dict) -> dict:
+    """Safely normalize input payload into legacy work-order field names."""
+    if not isinstance(top_asset, dict):
+        top_asset = {}
+
+    asset_id = top_asset.get("asset_id", "Unknown Asset")
+    model = top_asset.get("model", "High-Voltage Power Transformer")
+
+    substation_name = top_asset.get("substation_name")
+    if substation_name is None:
+        substation_name = top_asset.get("substation_id", "Unknown Substation")
+    if substation_name is None:
+        substation_name = "Unknown Substation"
+
+    final_risk_score = top_asset.get("final_risk_score")
+    if final_risk_score is None:
+        final_risk_score = top_asset.get("composite_risk_score", 0.0)
+    if final_risk_score is None:
+        final_risk_score = 0.0
+
+    category = top_asset.get("category")
+    if category is None:
+        category = top_asset.get("risk_category", "Standard")
+    if category is None:
+        category = "Standard"
+    if isinstance(category, str):
+        category = category.capitalize()
+
+    fault_flags = top_asset.get("fault_flags")
+    if fault_flags is None:
+        fault_flags = top_asset.get("risk_factors", [])
+    if not isinstance(fault_flags, list):
+        fault_flags = [str(fault_flags)] if fault_flags else []
+    else:
+        fault_flags = [str(f) for f in fault_flags]
+
+    criticality_factors = top_asset.get("criticality_factors", [])
+    if not isinstance(criticality_factors, list):
+        criticality_factors = [str(criticality_factors)] if criticality_factors else []
+    else:
+        criticality_factors = [str(f) for f in criticality_factors]
+
+    customers_raw = top_asset.get("customers")
+    if customers_raw is None:
+        customers_raw = top_asset.get("customers_served", 0)
+    try:
+        customers = int(customers_raw)
+    except (ValueError, TypeError):
+        customers = 0
+
+    return {
+        "asset_id": asset_id,
+        "model": model,
+        "substation_name": substation_name,
+        "final_risk_score": final_risk_score,
+        "category": category,
+        "fault_flags": fault_flags,
+        "criticality_factors": criticality_factors,
+        "customers": customers,
+    }
+
+
 def _build_prompt(top_asset: dict, weather: dict) -> str:
+    a = _extract_asset_fields(top_asset)
     return f"""You are GridSentinel Copilot, powered by IBM Granite.
 Generate a structured EMERGENCY PRE-POSITIONING WORK-ORDER DRAFT for:
-- Asset: {top_asset['asset_id']} ({top_asset['model']}) at {top_asset['substation_name']}
-- Final Risk Score: {top_asset['final_risk_score']} ({top_asset['category']})
-- Active Faults: {top_asset['fault_flags']}
+- Asset: {a['asset_id']} ({a['model']}) at {a['substation_name']}
+- Final Risk Score: {a['final_risk_score']} ({a['category']})
+- Active Faults: {a['fault_flags']}
 - Weather Event: {weather.get('event_name')} (Temp: {weather.get('ambient_temp_c')}C, Gusts: {weather.get('wind_speed_kmh')} km/h)
-- Impact: {top_asset['customers']:,} customers, Critical Infrastructure: {top_asset['criticality_factors']}
+- Impact: {a['customers']:,} customers, Critical Infrastructure: {a['criticality_factors']}
 
 Include:
 1. Operational Risk Assessment
@@ -31,23 +96,25 @@ Include:
 5. Mandatory Human Operator Sign-Off Notice
 """
 
+
 def _fallback_work_order(top_asset: dict, weather: dict) -> str:
     """Deterministic, high-fidelity offline response used whenever watsonx.ai
     credentials are absent or the live call fails, so the dashboard demo
     never breaks."""
+    a = _extract_asset_fields(top_asset)
     return f"""### OPERATIONAL PRE-POSITIONING DIRECTIVE
-**Target Asset:** {top_asset['asset_id']} | **Location:** {top_asset['substation_name']}
-**Calculated Risk Priority:** {top_asset['final_risk_score']}/100 (**{top_asset['category']} Urgency**)
+**Target Asset:** {a['asset_id']} | **Location:** {a['substation_name']}
+**Calculated Risk Priority:** {a['final_risk_score']}/100 (**{a['category']} Urgency**)
 
 #### 1. Root Cause Summary
-- **IEEE C57.104 Gas Signature:** {"; ".join(top_asset['fault_flags'])}
+- **IEEE C57.104 Gas Signature:** {"; ".join(a['fault_flags'])}
 - **Weather Compounding:** {weather.get('event_name', 'N/A')} at {weather.get('ambient_temp_c', 'N/A')}C
 with {weather.get('wind_speed_kmh', 'N/A')} km/h gusts.
-- **Topological Vulnerability:** {"; ".join(top_asset['criticality_factors']) or "standard residential load"}
-serving {top_asset['customers']:,} customers.
+- **Topological Vulnerability:** {"; ".join(a['criticality_factors']) or "standard residential load"}
+serving {a['customers']:,} customers.
 
 #### 2. Crew Pre-Positioning Directive
-- **Staging Depot:** Pre-position High-Voltage Rapid Response Crew #3 near {top_asset['substation_name']}.
+- **Staging Depot:** Pre-position High-Voltage Rapid Response Crew #3 near {a['substation_name']}.
 - **Required Equipment:** Mobile degasification unit, acoustic partial-discharge detector, infrared thermal camera.
 - **Spare Parts on Hot Standby:** Replacement bushing set and emergency radiator fan relay.
 
