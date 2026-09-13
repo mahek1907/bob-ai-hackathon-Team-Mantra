@@ -14,7 +14,7 @@ An AI-powered decision-support platform that predicts high-voltage transformer f
 | **Team Name** | Team Mantra |
 | **Track** | AI |
 | **Team Lead** | Mahek Dhebariya — [24cs018@charusat.edu.in](mailto:24cs018@charusat.edu.in) |
-| **Member 1** | Khushi KaPatel — [24cs032@charusat.edu.in](mailto:24cs032@charusat.edu.in) |
+| **Member 1** | Khushi Ka.Patel — [24cs032@charusat.edu.in](mailto:24cs032@charusat.edu.in) |
 | **Member 2** | Palak Donga — [24cs020@charusat.edu.in](mailto:24cs020@charusat.edu.in) |
 | **Member 3** | Yashvi Antala — [24cs006@charusat.edu.in](mailto:24cs006@charusat.edu.in) |
 
