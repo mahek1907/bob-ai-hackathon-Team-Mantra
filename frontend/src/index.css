@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+body {
+  font-size: 1rem;
+  line-height: 1.6;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+code, pre {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.95rem;
+}
+
+/* Crisp professional light scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animated bar transition */
+@keyframes barGrow {
+  from {
+    height: 0%;
+  }
+  to {
+    height: var(--target-height);
+  }
+}
+
+.animate-bar-grow {
+  animation: barGrow 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
