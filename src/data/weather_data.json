@@ -1,0 +1,8 @@
+{
+"event_name": "Tropical Storm Alex & Heatwave Inflow",
+"ambient_temp_c": 39.4,
+"wind_speed_kmh": 85.0,
+"lightning_strikes_last_hour": 42,
+"storm_severity_index": 8.5,
+"heatwave_alert": true
+}
