@@ -9,51 +9,58 @@
 # =============================================================================
 
 team:
-  name: ""                             # REQUIRED — e.g., "Orion Squad"
-  track: ""                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  name: "Team Mantra"                             # REQUIRED — e.g., "Orion Squad"
+  track: "AI"                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
   lead:
-    name: ""                           # REQUIRED — e.g., "Alice Chen"
-    email: ""                          # REQUIRED — e.g., "alice.chen@ibm.com"
+    name: "Mahek Dhebariya"                           # REQUIRED — e.g., "Alice Chen"
+    email: "24cs018@charusat.edu.in"                          # REQUIRED — e.g., "alice.chen@ibm.com"
   members:
-    - name: ""                         # REQUIRED — Team member 1
-      email: ""
-    - name: ""                         # Add more members by copying the two lines above
-      email: ""
-    - name: ""
-      email: ""
+    - name: "Khushi KaPatel"                         # REQUIRED — Team member 1
+      email: "24cs032@charusat.edu.in"
+    - name: "Palak Donga"                         # Add more members by copying the two lines above
+      email: "24cs020@charusat.edu.in"
+    - name: "Yashvi Antala"
+      email: "24cs006@charusat.edu.in"
 
 submission:
-  title: ""                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
-
+  title: "GridSentinel AI: Outage Prediction & Equipment Failure Copilot"  # REQUIRED
+  
   problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
-    Replace this text with a concise description of the real-world problem
-    your project addresses and who experiences it.
-
+    Power transformer and substation failures cause sudden regional blackouts costing utilities over
+    $1M per hour and disrupting critical infrastructure like hospitals and transit grids. Traditional
+    calendar-based maintenance misses early failure signatures in sensor data (DGA gases, oil
+    temperature, mechanical vibration) that rapidly compound during severe weather events.
+    
   solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
-    Replace this text with a clear description of your solution
-    and how it addresses the problem above.
-
+    GridSentinel unifies real-time transformer health telemetry (IEEE C57.104 DGA gas standards) with live
+    meteorological storm forecasts and grid topology criticality. Powered by IBM Bob IDE and IBM watsonx.ai
+    Granite 3.0, it predicts failure-prone assets weeks in advance and autonomously synthesizes emergency
+    load-shifting directives and crew pre-positioning work orders.
+    
   key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
-    - ""                               # e.g., "Real-time pipeline anomaly detection using watsonx.ai"
-    - ""
-    - ""
-    - ""                               # optional 4th
-    - ""                               # optional 5th
-
+    - "IEEE C57.104 Dissolved Gas Analysis (DGA) arcing and thermal runaway detection"
+    - "Dynamic weather severity compounding multiplier factoring wind gusts and heatwave stress"
+    - "Topological grid impact scoring (0-100) prioritizing critical loads like hospitals and transit"
+    - "Autonomous emergency crew pre-positioning and staging work-order generation via IBM Granite 3.0"
+    - "Interactive diagnostic dashboard with real-time asset telemetry and one-click dispatch exports"
+    
   tech_stack:
-    languages: []                      # REQUIRED — e.g., ["Python", "TypeScript"]
-    frameworks: []                     # e.g., ["FastAPI", "React"]
-    ibm_technologies: []               # e.g., ["watsonx.ai", "IBM Bob", "IBM Cloud Functions"]
-    databases: []                      # e.g., ["PostgreSQL", "Redis"]
-    other: []                          # e.g., ["Docker", "GitHub Actions", "Slack API"]
-
+    languages: ["Python"]              # REQUIRED — exact languages used in src/
+    frameworks: ["Streamlit", "Pandas", "Plotly"]
+    ibm_technologies: ["IBM Bob IDE", "IBM watsonx.ai", "IBM Granite 3.0"]
+    databases: ["JSON Data Store"]
+    other: ["IEEE C57.104 Standard", "GitHub Actions"]
+    
   what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
-    Replace with what aspect of the submission you consider strongest
-    and want judges to pay special attention to.
-
+    We are most proud of bridging the gap between rigorous IEEE C57.104 electrical engineering
+    diagnostics and generative AI. Instead of just producing generic text, our solution uses IBM Granite 3.0
+    to translate complex multi-variable physics and meteorological data into actionable, dispatch-ready
+    crew pre-positioning work orders that save millions in emergency downtime.
+    
   known_limitations: >                 # Optional but recommended — be honest about gaps
-    Replace with any known limitations, incomplete features,
-    or shortcuts taken due to time constraints.
+    Currently, the system ingests batch telemetry feeds rather than continuous Substation SCADA IEC 61850
+    streams. Real-time dynamic line rating (DLR) integration is slated for future development beyond the hackathon.
+
 
 # =============================================================================
 # ARTIFACT LOCATIONS
