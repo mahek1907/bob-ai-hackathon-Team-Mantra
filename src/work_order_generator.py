@@ -6,14 +6,25 @@ are configured, so the demo always works offline.
 Author: Palak Donga (Person 2)
 """
 import os
+from pathlib import Path
+
+# Load .env from multiple potential locations (project root, src/)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    _cwd_env = Path.cwd() / ".env"
+    _src_env = Path(__file__).resolve().parent / ".env"
+    _root_env = Path(__file__).resolve().parent.parent / ".env"
+    for env_path in (_cwd_env, _src_env, _root_env):
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
 except ImportError:
     pass
+
 WATSONX_API_KEY = os.getenv("WATSONX_API_KEY", "")
 WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID", "")
 WATSONX_URL = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+WATSONX_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "ibm/granite-3-8b-instruct")
 def _build_prompt(top_asset: dict, weather: dict) -> str:
     return f"""You are GridSentinel Copilot, powered by IBM Granite.
 Generate a structured EMERGENCY PRE-POSITIONING WORK-ORDER DRAFT for:
@@ -68,7 +79,16 @@ def generate_granite_work_order(top_asset: dict, weather: dict) -> str:
     demo/dashboard remains fully functional offline.
     """
 
-    if WATSONX_API_KEY and WATSONX_PROJECT_ID:
+    api_key = os.getenv("WATSONX_API_KEY", WATSONX_API_KEY)
+    project_id = os.getenv("WATSONX_PROJECT_ID", WATSONX_PROJECT_ID)
+    service_url = os.getenv("WATSONX_URL", WATSONX_URL)
+    model_id = os.getenv("WATSONX_MODEL_ID", WATSONX_MODEL_ID)
+
+    if (
+        api_key
+        and project_id
+        and api_key not in ("your_api_key_here", "your_ibm_cloud_api_key_here", "")
+    ):
         try:
             from ibm_watsonx_ai.foundation_models import Model
             from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
@@ -78,14 +98,14 @@ def generate_granite_work_order(top_asset: dict, weather: dict) -> str:
                 GenParams.REPETITION_PENALTY: 1.15,
             }
             model = Model(
-                model_id="ibm/granite-3-8b-instruct",
+                model_id=model_id,
                 params=params,
-                credentials={"url": WATSONX_URL, "apikey": WATSONX_API_KEY},
-                project_id=WATSONX_PROJECT_ID,
+                credentials={"url": service_url, "apikey": api_key},
+                project_id=project_id,
             )
             return model.generate_text(prompt=_build_prompt(top_asset, weather))
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[IBM watsonx.ai Notice] Live generation exception: {e}. Utilizing high-fidelity offline directive template.")
     return _fallback_work_order(top_asset, weather)
 if __name__ == "__main__":
     demo_asset = {
