@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import GridAnimation from '../components/GridAnimation';
 import { 
   Zap, 
   Eye, 
   EyeOff, 
   ArrowRight,
-  ShieldCheck,
-  Check
+  ShieldCheck
 } from 'lucide-react';
 
 export default function SignupPage({ onSignup, onNavigateToLogin }) {
@@ -33,16 +31,20 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
 
   const strength = getStrength();
   const strengthLabels = ['Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-  const strengthColors = ['bg-dark-600', 'bg-red-500', 'bg-amber-500', 'bg-blue-600', 'bg-emerald-600'];
+  const strengthColors = ['bg-slate-200', 'bg-red-500', 'bg-amber-500', 'bg-blue-600', 'bg-emerald-600'];
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!fullName || !email || !password) {
+      setError('Please complete all required fields.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
     if (!agreed) {
-      setError('Please accept the operational safeguarding terms.');
+      setError('Please confirm adherence to operational protocols.');
       return;
     }
     setError('');
@@ -68,131 +70,87 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-dark-950 text-slate-100 font-sans">
-      
-      {/* Left Panel: Subtle Electrical Grid Visualization */}
-      <div className="lg:w-1/2 relative min-h-[320px] lg:min-h-screen flex flex-col justify-between p-8 lg:p-14 overflow-hidden bg-[#070c18]">
-        <div className="absolute inset-0 z-0">
-          <GridAnimation />
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+      {/* Brand Header */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
+        <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-blue-600 text-white mb-3 shadow-xs">
+          <Zap className="w-6 h-6" />
         </div>
-
-        {/* Top Branding */}
-        <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-white font-sans">GridSentinel</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                AI
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <span className="text-[10px] font-mono font-medium px-2.5 py-1 rounded bg-slate-900/80 border border-slate-700/60 text-slate-300">
-              OPERATOR ONBOARDING: <strong className="text-emerald-400 font-bold">ACTIVE</strong>
-            </span>
-            <span className="text-[10px] font-mono font-medium px-2.5 py-1 rounded bg-slate-900/80 border border-slate-700/60 text-slate-300">
-              SECURITY PROTOCOL: <strong className="text-blue-400 font-bold">SCADA SSL</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Center Product Statement */}
-        <div className="relative z-10 max-w-md my-auto py-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug">
-            Equip your dispatch center with predictive intelligence.
-          </h1>
-          <p className="text-sm text-slate-300 mt-2.5 font-normal leading-relaxed">
-            Gain immediate access to continuous IEEE dissolved gas analysis, meteorological storm compounding, and automated crew pre-positioning directives.
-          </p>
-        </div>
-
-        {/* Bottom Technical Footer */}
-        <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-500 border-t border-slate-800/80 pt-4">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>SCADA Access Gateway • Port 8000</span>
-          </div>
-          <span className="text-slate-500">Team Mantra • AI Track</span>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          GridSentinel AI
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Power Grid Intelligence & Equipment Risk Management
+        </p>
       </div>
 
-      {/* Right Panel: Clean Registration Card */}
-      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-dark-950 grid-scan-bg">
-        <div className="w-full max-w-md glass-panel rounded-2xl p-8 shadow-panel space-y-5 animate-fade-in-up">
+      {/* Main Registration Card */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-lg px-4 sm:px-0">
+        <div className="bg-white py-8 px-6 sm:px-8 border border-slate-200 rounded-xl shadow-xs space-y-6">
           
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-glow-blue">
-                <Zap className="w-3.5 h-3.5" />
-              </div>
-              <span className="font-bold text-sm text-slate-100">GridSentinel AI</span>
-            </div>
-            <h2 className="text-xl font-bold text-slate-100 tracking-tight">
-              Create operator profile
+          <div className="border-b border-slate-100 pb-4">
+            <h2 className="text-base font-semibold text-slate-900">
+              Create Operator Profile
             </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Join the IEEE C57.104 automated grid monitoring fleet.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Request access to the IEEE C57.104 transmission diagnostic system
             </p>
           </div>
 
           {error && (
-            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 font-medium">
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium leading-relaxed">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Work Email
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Grid Utility / Org
                 </label>
                 <input
                   type="text"
                   value={org}
                   onChange={(e) => setOrg(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Role
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all cursor-pointer font-medium"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors cursor-pointer"
                 >
                   <option value="Senior Reliability Dispatcher">Reliability Dispatcher</option>
                   <option value="Transmission Operations Engineer">Transmission Engineer</option>
@@ -202,10 +160,9 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
               </div>
             </div>
 
-            {/* Passwords */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -213,66 +170,73 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 pr-9 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
+                    placeholder="••••••••••••"
+                    className="w-full px-3 pr-9 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors font-mono"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Confirm Password
                 </label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
+                  placeholder="••••••••••••"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors font-mono"
                   required
                 />
               </div>
             </div>
 
-            {/* Password Strength */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] font-mono">
-                <span className="text-slate-500">Security Rating:</span>
-                <span className="font-bold text-slate-200">{strengthLabels[strength]}</span>
+            {/* Password Strength Indicator */}
+            <div className="space-y-1.5 pt-0.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Password Strength:</span>
+                <span className="font-semibold text-slate-700">{strengthLabels[strength]}</span>
               </div>
-              <div className="grid grid-cols-4 gap-1 h-1">
+              <div className="grid grid-cols-4 gap-1.5 h-1">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
                     className={`h-full rounded-full transition-all ${
-                      i <= strength ? strengthColors[strength] : 'bg-dark-600'
+                      i <= strength ? strengthColors[strength] : 'bg-slate-200'
                     }`}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Terms */}
-            <label className="flex items-start gap-2 pt-1 text-xs text-slate-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded text-blue-400 border-slate-600 focus:ring-blue-500"
-              />
-              <span>I confirm adherence to IEEE C57.104 protocols and SCADA dispatch authorizations.</span>
-            </label>
+            {/* Terms checkbox */}
+            <div className="pt-1">
+              <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                />
+                <span className="leading-snug">
+                  I confirm compliance with IEEE C57.104 diagnostic protocols and authorized grid dispatch procedures.
+                </span>
+              </label>
+            </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all shadow-glow-blue hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:hover:scale-100"
+              className="w-full mt-2 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-xs"
             >
               {isLoading ? (
                 <>
@@ -288,20 +252,25 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             </button>
           </form>
 
-          <div className="text-center text-xs text-slate-500 pt-1">
+          {/* Link to Login */}
+          <div className="text-center text-xs text-slate-500 border-t border-slate-100 pt-4">
             <span>Already have an authorized profile? </span>
             <button
               type="button"
               onClick={onNavigateToLogin}
-              className="font-semibold text-blue-400 hover:text-blue-400 underline cursor-pointer"
+              className="font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
             >
               Sign In
             </button>
           </div>
 
         </div>
-      </div>
 
+        {/* Compliant Footer */}
+        <p className="text-center text-xs text-slate-400 mt-6">
+          Authorized utility personnel only. Adheres to IEEE C57.104 & NERC operational standards.
+        </p>
+      </div>
     </div>
   );
 }

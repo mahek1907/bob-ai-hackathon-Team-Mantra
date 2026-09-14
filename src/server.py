@@ -70,6 +70,20 @@ def get_raw_substations() -> List[Dict[str, Any]]:
     return _load_json_file(GRID_DATA_PATH, [])
 
 
+def get_enriched_substations() -> List[Dict[str, Any]]:
+    """Substation topology pre-enriched with computed criticality scores."""
+    subs = get_raw_substations()
+    enriched: List[Dict[str, Any]] = []
+    for s in subs:
+        c_res = calculate_grid_criticality(s)
+        sub_copy = dict(s)
+        sub_copy["computed_criticality"] = c_res["criticality_score"]
+        sub_copy["criticality_score"] = c_res["criticality_score"]
+        sub_copy["criticality_factors"] = c_res["criticality_factors"]
+        enriched.append(sub_copy)
+    return enriched
+
+
 # =============================================================================
 # FASTAPI APP INITIALIZATION
 # =============================================================================
@@ -198,12 +212,7 @@ def get_weather() -> Dict[str, Any]:
 @app.get("/api/substations", tags=["Telemetry"])
 def get_substations() -> List[Dict[str, Any]]:
     """Substation topology and grid criticality records."""
-    subs = get_raw_substations()
-    for s in subs:
-        c_res = calculate_grid_criticality(s)
-        s["computed_criticality"] = c_res["criticality_score"]
-        s["criticality_factors"] = c_res["criticality_factors"]
-    return subs
+    return get_enriched_substations()
 
 
 @app.get("/api/risk/ranked", tags=["Risk Analysis"])
@@ -214,7 +223,7 @@ def get_ranked_risk() -> Dict[str, Any]:
     """
     assets = get_raw_transformers()
     weather = get_raw_weather()
-    substations = get_raw_substations()
+    substations = get_enriched_substations()
 
     if not assets:
         return {"summary": {}, "ranked_assets": []}
@@ -287,7 +296,7 @@ def get_asset_detail(asset_id: str) -> Dict[str, Any]:
         )
 
     weather = get_raw_weather()
-    substations = get_raw_substations()
+    substations = get_enriched_substations()
 
     raw_map = {str(a.get("asset_id")): a for a in assets}
     sub_map = {str(s.get("substation_id")): s for s in substations}
@@ -320,7 +329,7 @@ def create_work_order(req: WorkOrderRequest) -> Dict[str, Any]:
         )
 
     weather = get_raw_weather()
-    substations = get_raw_substations()
+    substations = get_enriched_substations()
 
     raw_map = {str(a.get("asset_id")): a for a in assets}
     sub_map = {str(s.get("substation_id")): s for s in substations}

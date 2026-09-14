@@ -5,7 +5,7 @@
 :root {
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
-  color: #e2e8f0;
+  color: #0f172a;
 }
 
 html, body, #root {
@@ -13,70 +13,60 @@ html, body, #root {
 }
 
 body {
-  font-size: 1rem;
-  line-height: 1.6;
-  background-color: #05070d;
-  color: #e2e8f0;
-  background-image:
-    radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.12), transparent 45%),
-    radial-gradient(circle at 85% 15%, rgba(16, 185, 129, 0.08), transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.08), transparent 45%);
-  background-attachment: fixed;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 code, pre {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
 }
 
-/* Dark, glowing scrollbar */
+/* Light enterprise scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.4);
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: #cbd5e1;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+  background: #94a3b8;
 }
 
 /* ---------- Reusable design-system classes ---------- */
 
 .glass-panel {
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.72), rgba(11, 15, 25, 0.72));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .glass-panel-hover {
-  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(96, 165, 250, 0.35);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.15), 0 12px 32px -12px rgba(37, 99, 235, 0.35);
-  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 }
 
 .grid-scan-bg {
-  background-image:
-    linear-gradient(rgba(59, 130, 246, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
+  display: none;
 }
 
-.text-glow-blue { text-shadow: 0 0 18px rgba(59, 130, 246, 0.55); }
-.text-glow-red { text-shadow: 0 0 18px rgba(239, 68, 68, 0.55); }
-.text-glow-emerald { text-shadow: 0 0 18px rgba(16, 185, 129, 0.5); }
+.text-glow-blue { color: #2563eb; }
+.text-glow-red { color: #dc2626; }
+.text-glow-emerald { color: #059669; }
 
 /* ---------- Animated bar transition (existing) ---------- */
 @keyframes barGrow {
@@ -177,25 +167,150 @@ code, pre {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* ---------- Animated gradient border for hero/critical cards ---------- */
-@keyframes borderFlow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+/* ---------- Card & Container Standards ---------- */
+.card-enterprise {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
+
+/* ---------- Semantic Risk Badges ---------- */
+.badge-risk-low {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-risk-medium {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.badge-risk-high {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.badge-risk-critical {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* ---------- Standard Enterprise Table ---------- */
+.table-enterprise {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.table-enterprise th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-enterprise td {
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.table-enterprise tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table-enterprise tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* ---------- Standard Enterprise Buttons ---------- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #2563eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+.btn-primary:active {
+  background-color: #1e40af;
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* ---------- Modal & Dialog Borders ---------- */
 .animated-border {
-  position: relative;
-}
-.animated-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(90deg, #2563eb, #06b6d4, #10b981, #2563eb);
-  background-size: 200% 100%;
-  animation: borderFlow 4s linear infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  border: 1px solid #e2e8f0;
 }

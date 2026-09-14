@@ -14,18 +14,18 @@ export default function DgaRadarChart({ asset }) {
   ];
 
   return (
-    <div className="bg-dark-800 rounded-xl border border-slate-700/60 glass-panel-hover animate-fade-in-up shadow-panel p-5 space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-blue-400" />
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-blue-600" />
             <span>IEEE C57.104 Gas Concentrations — {asset.asset_id}</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Observed ppm vs. IEEE Standard Condition 1 Normal Limits
+            Observed ppm vs. IEEE Standard Condition 1 Normal Limits • {asset.substation_name || asset.substation_id}
           </p>
         </div>
-        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
+        <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 self-start sm:self-auto">
           5-Gas Diagnostic
         </span>
       </div>
@@ -41,24 +41,24 @@ export default function DgaRadarChart({ asset }) {
             <div key={g.formula} className="space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-100">{g.name}</span>
+                  <span className="font-semibold text-slate-900">{g.name}</span>
                   <span className="font-mono text-slate-500">({g.formula})</span>
                   <span className="text-slate-500 hidden sm:inline">— {g.fault}</span>
                 </div>
                 <div className="flex items-center gap-1.5 font-mono text-xs">
                   <span className={`font-bold ${
-                    isCritical ? 'text-red-400' : isElevated ? 'text-amber-400' : 'text-emerald-400'
+                    isCritical ? 'text-red-700' : isElevated ? 'text-amber-700' : 'text-emerald-700'
                   }`}>
                     {g.val} {g.unit}
                   </span>
-                  <span className="text-slate-500">
+                  <span className="text-slate-400">
                     / limit {g.limit}
                   </span>
                 </div>
               </div>
 
               {/* Clean solid progress bar */}
-              <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden relative">
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden relative">
                 <div
                   className={`h-full rounded-full transition-all ${
                     isCritical ? 'bg-red-600' : isElevated ? 'bg-amber-500' : 'bg-emerald-600'
