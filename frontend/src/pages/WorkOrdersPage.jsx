@@ -88,11 +88,11 @@ export default function WorkOrdersPage({
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="border-b border-slate-700/60 pb-4 animate-fade-in-up flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
             <span>IBM Granite 3.0 Emergency Dispatch Console</span>
-            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 border border-blue-500/30">
               watsonx.ai
             </span>
           </h1>
@@ -113,7 +113,7 @@ export default function WorkOrdersPage({
                 onGenerateWorkOrder(found);
               }
             }}
-            className="px-3 py-2.5 text-xs rounded-xl bg-white border border-slate-300 text-slate-900 font-mono font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-xs"
+            className="px-3 py-2.5 text-xs rounded-xl bg-dark-800 border border-slate-600 text-slate-100 font-mono font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-panel"
           >
             {assets.map(a => (
               <option key={a.asset_id} value={a.asset_id}>
@@ -138,19 +138,19 @@ export default function WorkOrdersPage({
         
         {/* Left 2 Cols: The Generated Operational Directive */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+          <div className="rounded-2xl border border-slate-700/60 bg-dark-800 p-6 shadow-panel">
+            <div className="flex items-center justify-between border-b border-slate-800/60 pb-4 mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  <span className="text-sm font-bold text-slate-100 uppercase tracking-wider">
                     Official Pre-Positioning Directive
                   </span>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-400 border border-blue-500/30">
                     {engineName || 'IBM Granite 3.0'}
                   </span>
                 </div>
                 <div className="text-xs text-slate-500 mt-1 font-medium">
-                  Target: <span className="font-mono font-bold text-slate-900">{currentAsset?.asset_id}</span> ({currentAsset?.model}) at <span className="font-semibold text-slate-700">{currentAsset?.substation_name}</span>
+                  Target: <span className="font-mono font-bold text-slate-100">{currentAsset?.asset_id}</span> ({currentAsset?.model}) at <span className="font-semibold text-slate-200">{currentAsset?.substation_name}</span>
                 </div>
               </div>
 
@@ -158,14 +158,14 @@ export default function WorkOrdersPage({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-dark-900 hover:bg-dark-700 text-slate-200 border border-slate-700/60 transition-colors cursor-pointer shadow-panel"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Copied' : 'Copy'}</span>
                 </button>
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-dark-900 hover:bg-dark-700 text-slate-200 border border-slate-700/60 transition-colors cursor-pointer shadow-panel"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download .md</span>
@@ -176,11 +176,11 @@ export default function WorkOrdersPage({
             {/* Content Display */}
             {isGenerating ? (
               <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-panel">
                   <Cpu className="w-7 h-7 animate-spin" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-slate-100">
                     Synthesizing Operational Plan with IBM Granite 3.0
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-md font-medium">
@@ -198,34 +198,34 @@ export default function WorkOrdersPage({
 
         {/* Right 1 Col: Human-in-the-Loop Countersign */}
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <UserCheck className="w-4 h-4 text-blue-600" />
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          <div className="rounded-2xl border border-slate-700/60 bg-dark-800 p-6 shadow-panel space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-800/60 pb-3">
+              <UserCheck className="w-4 h-4 text-blue-400" />
+              <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
                 Mandatory Operator Sign-Off
               </h3>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
               In compliance with NERC reliability standards, AI dispatch directives require digital verification and countersign before field crew deployment.
             </p>
 
             {signOffResult ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 space-y-1.5">
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-300 text-emerald-400 space-y-1.5">
                 <div className="flex items-center gap-2 font-bold text-xs">
-                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
                   <span>DIRECTIVE COUNTERSIGNED & QUEUED</span>
                 </div>
-                <div className="text-xs font-mono space-y-1 text-emerald-800">
-                  <div>Dispatch ID: <span className="font-bold text-slate-900">{signOffResult.dispatch_id}</span></div>
-                  <div>Operator: <span className="font-bold text-slate-900">{signOffResult.operator_name} ({signOffResult.operator_id})</span></div>
+                <div className="text-xs font-mono space-y-1 text-emerald-400">
+                  <div>Dispatch ID: <span className="font-bold text-slate-100">{signOffResult.dispatch_id}</span></div>
+                  <div>Operator: <span className="font-bold text-slate-100">{signOffResult.operator_name} ({signOffResult.operator_id})</span></div>
                   <div>Timestamp: {signOffResult.timestamp}</div>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleSignOff} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
                     Licensed Grid Operator Name
                   </label>
                   <input
@@ -233,12 +233,12 @@ export default function WorkOrdersPage({
                     value={operatorName}
                     onChange={(e) => setOperatorName(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 border border-slate-300 text-slate-900 font-mono font-medium focus:outline-none focus:border-blue-500 shadow-xs"
+                    className="w-full px-3 py-2 text-xs rounded-lg bg-dark-900 border border-slate-600 text-slate-100 font-mono font-medium focus:outline-none focus:border-blue-500 shadow-panel"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
                     Operator Badge / Certification ID
                   </label>
                   <input
@@ -246,16 +246,16 @@ export default function WorkOrdersPage({
                     value={operatorId}
                     onChange={(e) => setOperatorId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 border border-slate-300 text-slate-900 font-mono font-medium focus:outline-none focus:border-blue-500 shadow-xs"
+                    className="w-full px-3 py-2 text-xs rounded-lg bg-dark-900 border border-slate-600 text-slate-100 font-mono font-medium focus:outline-none focus:border-blue-500 shadow-panel"
                   />
                 </div>
 
-                <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer pt-2 font-medium">
+                <label className="flex items-start gap-2 text-xs text-slate-200 cursor-pointer pt-2 font-medium">
                   <input
                     type="checkbox"
                     checked={confirmed}
                     onChange={(e) => setConfirmed(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="mt-0.5 rounded border-slate-600 text-blue-400 focus:ring-blue-500 cursor-pointer"
                   />
                   <span>
                     I confirm verification of physical IEEE telemetry and authorize immediate crew pre-positioning.
