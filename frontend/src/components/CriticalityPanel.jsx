@@ -44,14 +44,14 @@ export default function CriticalityPanel({ substations = [] }) {
   const displaySubs = substations.length > 0 ? substations : defaultSubstations;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="bg-dark-800 rounded-2xl border border-slate-700/60 glass-panel-hover animate-fade-in-up shadow-panel p-6 space-y-4">
+      <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200">
+          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
             <Network className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-base font-bold text-slate-100">
               Grid & Critical Infrastructure
             </h3>
             <span className="text-xs text-slate-500 font-medium">Topological Priority Matrix</span>
@@ -66,24 +66,24 @@ export default function CriticalityPanel({ substations = [] }) {
         {displaySubs.map((sub, idx) => (
           <div
             key={idx}
-            className="p-4 rounded-xl bg-slate-50 border border-slate-200 transition-all hover:border-slate-300 hover:bg-slate-100/60"
+            className="p-4 rounded-xl bg-dark-900 border border-slate-700/60 transition-all hover:border-slate-600 hover:bg-dark-700/60"
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <div>
-                <span className="text-xs font-mono text-blue-700 font-bold">
+                <span className="text-xs font-mono text-blue-400 font-bold">
                   {sub.substation_id}
                 </span>
-                <div className="text-sm font-bold text-slate-900">
+                <div className="text-sm font-bold text-slate-100">
                   {sub.name}
                 </div>
               </div>
               <div className="text-right">
                 <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md ${
                   (sub.computed_criticality || 0) >= 80
-                    ? 'bg-red-100 text-red-700 border border-red-300'
+                    ? 'bg-red-500/15 text-red-400 border border-red-300'
                     : (sub.computed_criticality || 0) >= 40
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                    : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-400 border border-emerald-300'
                 }`}>
                   Crit: {sub.computed_criticality || 0}/100
                 </span>
@@ -93,24 +93,24 @@ export default function CriticalityPanel({ substations = [] }) {
             {/* Infrastructure Tags */}
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
               {sub.hospital_connected && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-                  <HeartPulse className="w-3.5 h-3.5 text-red-600" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30">
+                  <HeartPulse className="w-3.5 h-3.5 text-red-400" />
                   <span>Trauma Hospital</span>
                 </span>
               )}
               {sub.transit_connected && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                  <Train className="w-3.5 h-3.5 text-purple-600" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                  <Train className="w-3.5 h-3.5 text-purple-400" />
                   <span>Transit / Rail</span>
                 </span>
               )}
               {sub.water_plant_connected && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200">
-                  <Droplets className="w-3.5 h-3.5 text-cyan-600" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                  <Droplets className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Water Plant</span>
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold text-slate-600 bg-white border border-slate-200">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold text-slate-300 bg-dark-800 border border-slate-700/60">
                 {(sub.customers_served || 0).toLocaleString()} customers
               </span>
             </div>

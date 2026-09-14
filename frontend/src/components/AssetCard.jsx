@@ -19,13 +19,13 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
   const getCategoryBadge = (cat) => {
     switch (cat?.toUpperCase()) {
       case 'CRITICAL':
-        return 'bg-red-50 text-red-700 border-red-200 font-bold';
+        return 'bg-red-500/10 text-red-400 border-red-500/30 font-bold';
       case 'HIGH':
-        return 'bg-amber-50 text-amber-800 border-amber-200 font-bold';
+        return 'bg-amber-500/10 text-amber-400 border-amber-500/30 font-bold';
       case 'MEDIUM':
-        return 'bg-yellow-50 text-yellow-800 border-yellow-200 font-bold';
+        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-bold';
       default:
-        return 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold';
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-bold';
     }
   };
 
@@ -38,39 +38,39 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
       acetylene: 1,
     };
     const limit = limits[gas] || 100;
-    if (ppm > limit * 3) return { label: 'CRITICAL', color: 'bg-red-50 text-red-700 font-bold border border-red-200' };
-    if (ppm > limit) return { label: 'ELEVATED', color: 'bg-amber-50 text-amber-800 font-semibold border border-amber-200' };
-    return { label: 'NORMAL', color: 'bg-emerald-50 text-emerald-800 border border-emerald-200' };
+    if (ppm > limit * 3) return { label: 'CRITICAL', color: 'bg-red-500/10 text-red-400 font-bold border border-red-500/30' };
+    if (ppm > limit) return { label: 'ELEVATED', color: 'bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/30' };
+    return { label: 'NORMAL', color: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' };
   };
 
   const dga = asset.dga_ppm || {};
   const isHighUrgency = asset.risk_category === 'CRITICAL' || asset.risk_category === 'HIGH';
 
   return (
-    <div className={`rounded-xl border transition-colors bg-white ${
+    <div className={`rounded-xl border transition-all glass-panel-hover bg-dark-800 ${
       asset.risk_category === 'CRITICAL'
-        ? 'border-red-200'
+        ? 'border-red-500/30 shadow-glow-red'
         : asset.risk_category === 'HIGH'
-        ? 'border-amber-200'
-        : 'border-slate-200'
-    } p-5 shadow-xs hover:border-slate-300`}>
+        ? 'border-amber-500/30 shadow-glow-amber'
+        : 'border-slate-700/60'
+    } p-5 shadow-panel hover:border-slate-600`}>
       
       {/* Top Bar: Asset Info & Risk Gauge */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono font-bold text-lg text-slate-900">
+            <span className="font-mono font-bold text-lg text-slate-100">
               {asset.asset_id}
             </span>
             <span className={`text-[11px] font-mono px-2 py-0.5 rounded border uppercase ${getCategoryBadge(asset.risk_category)}`}>
               {asset.risk_category}
             </span>
-            <span className="text-xs font-mono text-slate-400">
+            <span className="text-xs font-mono text-slate-500">
               {asset.age_years} yrs in service
             </span>
           </div>
 
-          <div className="text-sm font-semibold text-slate-900 mt-1">
+          <div className="text-sm font-semibold text-slate-100 mt-1">
             {asset.substation_name || asset.substation_id}
           </div>
           <div className="text-xs text-slate-500 font-medium">
@@ -81,8 +81,8 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
         {/* Circular Gauge */}
         <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
           <div className="text-right hidden sm:block">
-            <div className="text-[10px] font-mono font-bold text-slate-400 uppercase">COMPOSITE RISK</div>
-            <div className="text-xs font-mono text-slate-600 font-semibold">IEEE + Weather</div>
+            <div className="text-[10px] font-mono font-bold text-slate-500 uppercase">COMPOSITE RISK</div>
+            <div className="text-xs font-mono text-slate-300 font-semibold">IEEE + Weather</div>
           </div>
           <RiskGauge score={asset.composite_risk_score} size={58} strokeWidth={6} />
         </div>
@@ -90,30 +90,30 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
 
       {/* Operational Metrics Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+        <div className="p-2.5 rounded-lg bg-dark-900 border border-slate-700/60 text-center">
           <div className="text-[11px] text-slate-500 font-medium mb-0.5">Oil Temp</div>
-          <div className={`font-mono text-sm font-bold ${asset.oil_temp_c > 100 ? 'text-red-600' : 'text-slate-900'}`}>
+          <div className={`font-mono text-sm font-bold ${asset.oil_temp_c > 100 ? 'text-red-400' : 'text-slate-100'}`}>
             {asset.oil_temp_c ? `${asset.oil_temp_c}°C` : 'N/A'}
           </div>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+        <div className="p-2.5 rounded-lg bg-dark-900 border border-slate-700/60 text-center">
           <div className="text-[11px] text-slate-500 font-medium mb-0.5">Winding Temp</div>
-          <div className="font-mono text-sm font-bold text-slate-900">
+          <div className="font-mono text-sm font-bold text-slate-100">
             {asset.winding_temp_c ? `${asset.winding_temp_c}°C` : 'N/A'}
           </div>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+        <div className="p-2.5 rounded-lg bg-dark-900 border border-slate-700/60 text-center">
           <div className="text-[11px] text-slate-500 font-medium mb-0.5">Vibration</div>
-          <div className={`font-mono text-sm font-bold ${asset.vibration_mms > 6 ? 'text-amber-600' : 'text-slate-900'}`}>
+          <div className={`font-mono text-sm font-bold ${asset.vibration_mms > 6 ? 'text-amber-400' : 'text-slate-100'}`}>
             {asset.vibration_mms ? `${asset.vibration_mms} mm/s` : 'N/A'}
           </div>
         </div>
 
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+        <div className="p-2.5 rounded-lg bg-dark-900 border border-slate-700/60 text-center">
           <div className="text-[11px] text-slate-500 font-medium mb-0.5">Grid Load</div>
-          <div className="font-mono text-sm font-bold text-slate-900">
+          <div className="font-mono text-sm font-bold text-slate-100">
             {asset.load_pct ? `${asset.load_pct}%` : 'N/A'}
           </div>
         </div>
@@ -122,14 +122,14 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
       {/* Active Fault Flags */}
       {asset.risk_factors && asset.risk_factors.length > 0 && (
         <div className="mb-4">
-          <div className="text-[11px] font-mono font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+          <div className="text-[11px] font-mono font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
             Diagnostic Risk Flags
           </div>
           <div className="flex flex-wrap gap-1.5">
             {asset.risk_factors.map((factor, idx) => (
               <span
                 key={idx}
-                className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700"
+                className="text-xs font-medium px-2 py-0.5 rounded bg-dark-700 border border-slate-700/60 text-slate-200"
               >
                 {factor}
               </span>
@@ -140,10 +140,10 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
 
       {/* Expandable DGA Gas Breakdown */}
       {Object.keys(dga).length > 0 && (
-        <div className="border-t border-slate-100 pt-3 mb-4">
+        <div className="border-t border-slate-800/60 pt-3 mb-4">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full flex items-center justify-between text-xs font-mono font-bold text-blue-600 hover:text-blue-700 py-1 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between text-xs font-mono font-bold text-blue-400 hover:text-blue-400 py-1 transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
@@ -153,8 +153,8 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
           </button>
 
           {isExpanded && (
-            <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
-              <div className="grid grid-cols-5 gap-2 text-center border-b border-slate-200 pb-1.5 font-mono text-[10px] font-bold text-slate-400 uppercase">
+            <div className="mt-3 p-3 rounded-lg bg-dark-900 border border-slate-700/60 space-y-1.5 text-xs">
+              <div className="grid grid-cols-5 gap-2 text-center border-b border-slate-700/60 pb-1.5 font-mono text-[10px] font-bold text-slate-500 uppercase">
                 <div>Gas</div>
                 <div>Formula</div>
                 <div>Observed (ppm)</div>
@@ -172,15 +172,15 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
                 const status = getDgaGasStatus(g.name.toLowerCase(), g.val);
                 return (
                   <div key={idx} className="grid grid-cols-5 gap-2 text-center py-0.5 font-mono items-center">
-                    <span className="text-slate-800 font-sans font-medium">{g.name}</span>
-                    <span className="text-slate-400">{g.formula}</span>
-                    <span className="font-bold text-slate-900">{g.val}</span>
+                    <span className="text-slate-100 font-sans font-medium">{g.name}</span>
+                    <span className="text-slate-500">{g.formula}</span>
+                    <span className="font-bold text-slate-100">{g.val}</span>
                     <div>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded ${status.color}`}>
                         {status.label}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-600 truncate font-sans text-left">
+                    <span className="text-[11px] text-slate-300 truncate font-sans text-left">
                       {g.fault}
                     </span>
                   </div>
@@ -192,18 +192,18 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
       )}
 
       {/* Suggested Action & IBM Granite Dispatch Button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
-        <div className="text-slate-600">
-          <strong className="text-slate-900">Recommended Action:</strong> {asset.suggested_action}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/60 text-xs">
+        <div className="text-slate-300">
+          <strong className="text-slate-100">Recommended Action:</strong> {asset.suggested_action}
         </div>
 
         <button
           onClick={() => onGenerateWorkOrder(asset)}
           disabled={isGenerating}
-          className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
+          className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all hover:scale-105 cursor-pointer ${
             isHighUrgency
-              ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-glow-blue'
+              : 'bg-dark-700 hover:bg-dark-600 text-slate-200 border border-slate-700/60'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-yellow-300" />

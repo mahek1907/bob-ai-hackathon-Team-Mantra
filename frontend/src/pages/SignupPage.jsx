@@ -33,7 +33,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
 
   const strength = getStrength();
   const strengthLabels = ['Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-  const strengthColors = ['bg-slate-200', 'bg-red-500', 'bg-amber-500', 'bg-blue-600', 'bg-emerald-600'];
+  const strengthColors = ['bg-dark-600', 'bg-red-500', 'bg-amber-500', 'bg-blue-600', 'bg-emerald-600'];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -68,7 +68,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-dark-950 text-slate-100 font-sans">
       
       {/* Left Panel: Subtle Electrical Grid Visualization */}
       <div className="lg:w-1/2 relative min-h-[320px] lg:min-h-screen flex flex-col justify-between p-8 lg:p-14 overflow-hidden bg-[#070c18]">
@@ -111,27 +111,27 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
         </div>
 
         {/* Bottom Technical Footer */}
-        <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-400 border-t border-slate-800/80 pt-4">
+        <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-500 border-t border-slate-800/80 pt-4">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             <span>SCADA Access Gateway • Port 8000</span>
           </div>
-          <span className="text-slate-400">Team Mantra • AI Track</span>
+          <span className="text-slate-500">Team Mantra • AI Track</span>
         </div>
       </div>
 
       {/* Right Panel: Clean Registration Card */}
-      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-[#f8fafc]">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-8 shadow-xs space-y-5">
+      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-dark-950 grid-scan-bg">
+        <div className="w-full max-w-md glass-panel rounded-2xl p-8 shadow-panel space-y-5 animate-fade-in-up">
           
           <div className="space-y-1">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-glow-blue">
                 <Zap className="w-3.5 h-3.5" />
               </div>
-              <span className="font-bold text-sm text-slate-900">GridSentinel AI</span>
+              <span className="font-bold text-sm text-slate-100">GridSentinel AI</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl font-bold text-slate-100 tracking-tight">
               Create operator profile
             </h2>
             <p className="text-xs text-slate-500 font-medium">
@@ -140,7 +140,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
           </div>
 
           {error && (
-            <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 font-medium">
               {error}
             </div>
           )}
@@ -148,26 +148,26 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Work Email
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                   required
                 />
               </div>
@@ -175,24 +175,24 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Grid Utility / Org
                 </label>
                 <input
                   type="text"
                   value={org}
                   onChange={(e) => setOrg(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Role
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all cursor-pointer font-medium"
+                  className="w-full px-2.5 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all cursor-pointer font-medium"
                 >
                   <option value="Senior Reliability Dispatcher">Reliability Dispatcher</option>
                   <option value="Transmission Operations Engineer">Transmission Engineer</option>
@@ -205,7 +205,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             {/* Passwords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -213,13 +213,13 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 pr-9 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
+                    className="w-full px-3 py-2 pr-9 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -227,14 +227,14 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider mb-1">
                   Confirm Password
                 </label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-dark-800 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all font-mono"
                   required
                 />
               </div>
@@ -244,14 +244,14 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px] font-mono">
                 <span className="text-slate-500">Security Rating:</span>
-                <span className="font-bold text-slate-700">{strengthLabels[strength]}</span>
+                <span className="font-bold text-slate-200">{strengthLabels[strength]}</span>
               </div>
               <div className="grid grid-cols-4 gap-1 h-1">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
                     className={`h-full rounded-full transition-all ${
-                      i <= strength ? strengthColors[strength] : 'bg-slate-200'
+                      i <= strength ? strengthColors[strength] : 'bg-dark-600'
                     }`}
                   />
                 ))}
@@ -259,12 +259,12 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             </div>
 
             {/* Terms */}
-            <label className="flex items-start gap-2 pt-1 text-xs text-slate-600 cursor-pointer select-none">
+            <label className="flex items-start gap-2 pt-1 text-xs text-slate-300 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
+                className="w-4 h-4 mt-0.5 rounded text-blue-400 border-slate-600 focus:ring-blue-500"
               />
               <span>I confirm adherence to IEEE C57.104 protocols and SCADA dispatch authorizations.</span>
             </label>
@@ -272,7 +272,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all shadow-glow-blue hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:hover:scale-100"
             >
               {isLoading ? (
                 <>
@@ -293,7 +293,7 @@ export default function SignupPage({ onSignup, onNavigateToLogin }) {
             <button
               type="button"
               onClick={onNavigateToLogin}
-              className="font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+              className="font-semibold text-blue-400 hover:text-blue-400 underline cursor-pointer"
             >
               Sign In
             </button>
