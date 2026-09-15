@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AssetCard from '../components/AssetCard';
 import DgaRadarChart from '../components/DgaRadarChart';
+import ContingencySimulator from '../components/ContingencySimulator';
 import {
   Search,
   LayoutGrid,
@@ -11,7 +12,8 @@ import {
   Activity,
   ShieldAlert,
   Zap,
-  Gauge
+  Gauge,
+  FlaskConical
 } from 'lucide-react';
 
 export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerating, selectedAssetId }) {
@@ -22,6 +24,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
   const [activeChartAsset, setActiveChartAsset] = useState(() => {
     return assets.find(a => a.asset_id === selectedAssetId) || assets[0];
   });
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
 
   useEffect(() => {
     if (selectedAssetId) {
@@ -77,7 +80,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-center">
+          <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
             <span className={`text-xs font-mono px-2.5 py-1 rounded-md border shadow-xs ${
               counts.CRITICAL > 0
                 ? 'bg-red-50 text-red-700 border-red-200 font-semibold'
@@ -85,6 +88,16 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
             }`}>
               {counts.CRITICAL > 0 ? `${counts.CRITICAL} Critical Advisory` : 'Fleet Nominal'}
             </span>
+
+            {/* Operational Contingency Simulator Button */}
+            <button
+              type="button"
+              onClick={() => setIsSimulatorOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white shadow-xs transition-colors cursor-pointer border border-slate-700"
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              <span>Simulate Contingency</span>
+            </button>
 
             {/* View Mode Switcher */}
             <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-lg">
@@ -406,6 +419,13 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
           </div>
         </div>
       )}
+
+      {/* Operational Contingency Simulator Modal */}
+      <ContingencySimulator
+        isOpen={isSimulatorOpen}
+        onClose={() => setIsSimulatorOpen(false)}
+        assets={assets}
+      />
     </div>
   );
 }
