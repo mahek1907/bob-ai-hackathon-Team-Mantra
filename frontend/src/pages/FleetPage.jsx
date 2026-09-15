@@ -3,6 +3,7 @@ import AssetCard from '../components/AssetCard';
 import DgaRadarChart from '../components/DgaRadarChart';
 import ContingencySimulator from '../components/ContingencySimulator';
 import ExplainRiskModal from '../components/ExplainRiskModal';
+import EventHistoryModal from '../components/EventHistoryModal';
 import {
   Search,
   LayoutGrid,
@@ -15,10 +16,12 @@ import {
   Zap,
   Gauge,
   FlaskConical,
-  HelpCircle
+  HelpCircle,
+  Clock
 } from 'lucide-react';
+import { EVENT_TYPES } from '../hooks/useEventHistory';
 
-export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerating, selectedAssetId }) {
+export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerating, selectedAssetId, events = [], recordEvent }) {
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('risk_desc');
@@ -28,6 +31,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
   });
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [explainAsset, setExplainAsset] = useState(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (selectedAssetId) {
@@ -91,6 +95,21 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
             }`}>
               {counts.CRITICAL > 0 ? `${counts.CRITICAL} Critical Advisory` : 'Fleet Nominal'}
             </span>
+
+            {/* Event History Button */}
+            <button
+              type="button"
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-colors cursor-pointer border border-slate-300"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Event History</span>
+              {events.length > 0 && (
+                <span className="ml-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-mono font-bold px-1">
+                  {events.length}
+                </span>
+              )}
+            </button>
 
             {/* Operational Contingency Simulator Button */}
             <button
@@ -440,6 +459,16 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
         assets={assets}
+        onSimulate={recordEvent ? (assetId, summary, detail) => {
+          recordEvent(EVENT_TYPES.SIMULATION, assetId, summary, detail);
+        } : undefined}
+      />
+
+      {/* Operational Maintenance Timeline & Event History Modal */}
+      <EventHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        events={events}
       />
 
       {/* Why Is This Asset At Risk? Explainability Panel */}

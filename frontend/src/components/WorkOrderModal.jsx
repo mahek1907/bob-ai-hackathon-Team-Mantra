@@ -70,14 +70,17 @@ export default function WorkOrderModal({
       });
       const data = await res.json();
       setSignOffResult(data);
+      if (onCountersign) onCountersign(data);
     } catch (err) {
-      setSignOffResult({
+      const fallback = {
         status: 'APPROVED',
         dispatch_id: `DSP-${asset.asset_id}-${Date.now().toString().slice(-6)}`,
         operator_name: operatorName,
         operator_id: operatorId,
         timestamp: new Date().toISOString(),
-      });
+      };
+      setSignOffResult(fallback);
+      if (onCountersign) onCountersign(fallback);
     } finally {
       setIsSubmitting(false);
     }

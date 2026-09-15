@@ -228,7 +228,7 @@ function CompareRow({ label, currentVal, scenarioVal, formatter, higherIsBad = t
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ContingencySimulator({ isOpen, onClose, assets = [] }) {
+export default function ContingencySimulator({ isOpen, onClose, assets = [], onSimulate }) {
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   const [selectedScenario, setSelectedScenario] = useState('weather_escalation');
 
@@ -238,6 +238,21 @@ export default function ContingencySimulator({ isOpen, onClose, assets = [] }) {
       setSelectedAssetId(assets[0].asset_id);
     }
   }, [assets]);
+
+  // Record simulation event when the simulator is opened or selection changes
+  useEffect(() => {
+    if (!isOpen || !selectedAssetId) return;
+    const targetAsset = assets.find(a => a.asset_id === selectedAssetId);
+    if (!targetAsset || !onSimulate) return;
+    const scenario = SCENARIOS.find(s => s.id === selectedScenario);
+    onSimulate(
+      selectedAssetId,
+      `Contingency scenario simulated: ${scenario?.label || selectedScenario}`,
+      `Asset: ${selectedAssetId} · Scenario: ${scenario?.label} · Current risk: ${targetAsset.composite_risk_score} (${targetAsset.risk_category})`
+    );
+  // Trigger only when the user actively changes a selection, not on every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, selectedAssetId, selectedScenario]);
 
   if (!isOpen) return null;
 
