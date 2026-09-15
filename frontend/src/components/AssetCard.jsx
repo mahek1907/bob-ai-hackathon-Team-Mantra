@@ -9,11 +9,12 @@ import {
   AlertTriangle,
   ShieldAlert,
   ArrowRight,
-  FileText
+  FileText,
+  ArrowLeftRight
 } from 'lucide-react';
 import RiskGauge from './RiskGauge';
 
-export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating, onExplainRisk }) {
+export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating, onExplainRisk, onPlanTransfer }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getCategoryBadge = (cat) => {
@@ -207,6 +208,16 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating, on
             >
               <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />
               <span>Explain Risk</span>
+            </button>
+          )}
+          {onPlanTransfer && (
+            <button
+              type="button"
+              onClick={onPlanTransfer}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
+              <span>Plan Transfer</span>
             </button>
           )}
           <button

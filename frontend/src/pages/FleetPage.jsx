@@ -4,6 +4,7 @@ import DgaRadarChart from '../components/DgaRadarChart';
 import ContingencySimulator from '../components/ContingencySimulator';
 import ExplainRiskModal from '../components/ExplainRiskModal';
 import EventHistoryModal from '../components/EventHistoryModal';
+import LoadTransferPlanner from '../components/LoadTransferPlanner';
 import {
   Search,
   LayoutGrid,
@@ -17,7 +18,8 @@ import {
   Gauge,
   FlaskConical,
   HelpCircle,
-  Clock
+  Clock,
+  ArrowLeftRight
 } from 'lucide-react';
 import { EVENT_TYPES } from '../hooks/useEventHistory';
 
@@ -32,6 +34,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [explainAsset, setExplainAsset] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [transferSourceAsset, setTransferSourceAsset] = useState(null);
 
   useEffect(() => {
     if (selectedAssetId) {
@@ -298,6 +301,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
                     onGenerateWorkOrder={onGenerateWorkOrder}
                     isGenerating={isGenerating && selectedAssetId === asset.asset_id}
                     onExplainRisk={(e) => { e.stopPropagation(); setExplainAsset(asset); }}
+                    onPlanTransfer={(e) => { e.stopPropagation(); setTransferSourceAsset(asset); }}
                   />
                 </div>
               );
@@ -433,6 +437,15 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
                             </button>
                             <button
                               type="button"
+                              onClick={(e) => { e.stopPropagation(); setTransferSourceAsset(asset); }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs"
+                              title="Plan Load Transfer"
+                            >
+                              <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Transfer</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => { e.stopPropagation(); onGenerateWorkOrder(asset); }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
                                 isCritical
@@ -476,6 +489,14 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
         isOpen={!!explainAsset}
         onClose={() => setExplainAsset(null)}
         asset={explainAsset}
+      />
+
+      {/* Operational Load Transfer Planner */}
+      <LoadTransferPlanner
+        isOpen={!!transferSourceAsset}
+        onClose={() => setTransferSourceAsset(null)}
+        sourceAsset={transferSourceAsset}
+        assets={assets}
       />
     </div>
   );
