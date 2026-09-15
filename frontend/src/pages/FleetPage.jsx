@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AssetCard from '../components/AssetCard';
 import DgaRadarChart from '../components/DgaRadarChart';
 import ContingencySimulator from '../components/ContingencySimulator';
+import ExplainRiskModal from '../components/ExplainRiskModal';
 import {
   Search,
   LayoutGrid,
@@ -13,7 +14,8 @@ import {
   ShieldAlert,
   Zap,
   Gauge,
-  FlaskConical
+  FlaskConical,
+  HelpCircle
 } from 'lucide-react';
 
 export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerating, selectedAssetId }) {
@@ -25,6 +27,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
     return assets.find(a => a.asset_id === selectedAssetId) || assets[0];
   });
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [explainAsset, setExplainAsset] = useState(null);
 
   useEffect(() => {
     if (selectedAssetId) {
@@ -275,6 +278,7 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
                     asset={asset}
                     onGenerateWorkOrder={onGenerateWorkOrder}
                     isGenerating={isGenerating && selectedAssetId === asset.asset_id}
+                    onExplainRisk={(e) => { e.stopPropagation(); setExplainAsset(asset); }}
                   />
                 </div>
               );
@@ -398,17 +402,28 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
                         </td>
 
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onGenerateWorkOrder(asset); }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
-                              isCritical
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs'
-                            }`}
-                          >
-                            Dispatch
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setExplainAsset(asset); }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs"
+                              title="Explain Risk Score"
+                            >
+                              <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Explain</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onGenerateWorkOrder(asset); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                                isCritical
+                                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs'
+                              }`}
+                            >
+                              Dispatch
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -425,6 +440,13 @@ export default function FleetPage({ assets = [], onGenerateWorkOrder, isGenerati
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
         assets={assets}
+      />
+
+      {/* Why Is This Asset At Risk? Explainability Panel */}
+      <ExplainRiskModal
+        isOpen={!!explainAsset}
+        onClose={() => setExplainAsset(null)}
+        asset={explainAsset}
       />
     </div>
   );

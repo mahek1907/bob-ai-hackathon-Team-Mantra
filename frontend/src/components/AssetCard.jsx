@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import RiskGauge from './RiskGauge';
 
-export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) {
+export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating, onExplainRisk }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getCategoryBadge = (cat) => {
@@ -192,25 +192,37 @@ export default function AssetCard({ asset, onGenerateWorkOrder, isGenerating }) 
         </div>
       )}
 
-      {/* Suggested Action & IBM Granite Dispatch Button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
+      {/* Suggested Action & Action Buttons */}
+      <div className="flex flex-col gap-2 pt-3 border-t border-slate-100 text-xs">
         <div className="text-slate-600">
           <strong className="text-slate-900">Recommended Action:</strong> {asset.suggested_action}
         </div>
 
-        <button
-          onClick={() => onGenerateWorkOrder(asset)}
-          disabled={isGenerating}
-          className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer shrink-0 ${
-            isCritical || isHigh
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-              : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs'
-          } ${isGenerating ? 'opacity-70 cursor-not-allowed' : ''}`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-          <span>Dispatch Work Order</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {onExplainRisk && (
+            <button
+              type="button"
+              onClick={onExplainRisk}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />
+              <span>Explain Risk</span>
+            </button>
+          )}
+          <button
+            onClick={() => onGenerateWorkOrder(asset)}
+            disabled={isGenerating}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer shrink-0 ${
+              isCritical || isHigh
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-xs'
+            } ${isGenerating ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+            <span>Dispatch Work Order</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
