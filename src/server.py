@@ -17,12 +17,23 @@ import hmac
 import hashlib
 import re
 from pathlib import Path
+import asyncio
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import requests
-from fastapi import FastAPI, HTTPException, status, Header, Depends, Request
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    status,
+    Header,
+    Depends,
+    Request,
+    WebSocket,
+    WebSocketDisconnect
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -46,6 +57,10 @@ try:
     from .criticality_engine import calculate_grid_criticality
     from .work_order_generator import generate_granite_work_order, WATSONX_API_KEY, WATSONX_PROJECT_ID
     from .auth import hash_password, verify_password, create_access_token, decode_access_token, JWT_SECRET_KEY
+    from .services.weather_service import WeatherService
+    from .services.telemetry_service import TelemetryService
+    from .services.risk_service import RiskService
+    from .services.mqtt_service import MqttService
 except ImportError:
     from risk_engine import calculate_comprehensive_risk  # type: ignore
     from dga_engine import evaluate_dga_and_health  # type: ignore
@@ -53,6 +68,11 @@ except ImportError:
     from criticality_engine import calculate_grid_criticality  # type: ignore
     from work_order_generator import generate_granite_work_order, WATSONX_API_KEY, WATSONX_PROJECT_ID  # type: ignore
     from auth import hash_password, verify_password, create_access_token, decode_access_token, JWT_SECRET_KEY  # type: ignore
+    from services.weather_service import WeatherService  # type: ignore
+    from services.telemetry_service import TelemetryService  # type: ignore
+    from services.risk_service import RiskService  # type: ignore
+    from services.mqtt_service import MqttService  # type: ignore
+
 
 
 # =============================================================================
@@ -65,6 +85,7 @@ DATA_DIR = BASE_DIR / "data"
 TRANSFORMER_DATA_PATH = DATA_DIR / "transformer_telemetry.json"
 WEATHER_DATA_PATH = DATA_DIR / "weather_data.json"
 GRID_DATA_PATH = DATA_DIR / "grid_criticality.json"
+HISTORICAL_DATA_PATH = DATA_DIR / "historical_incidents.json"
 USERS_DATA_PATH = DATA_DIR / "users.json"
 
 
@@ -81,10 +102,22 @@ def _load_json_file(path: Path, default: Any = None) -> Any:
 
 
 def get_raw_transformers() -> List[Dict[str, Any]]:
+    # Use live telemetry service registry if initialized; fallback to file
+    try:
+        if "telemetry_service" in globals() and telemetry_service:
+            return telemetry_service.get_all_assets()
+    except Exception:
+        pass
     return _load_json_file(TRANSFORMER_DATA_PATH, [])
 
 
 def get_raw_weather() -> Dict[str, Any]:
+    # Use live weather service if initialized; fallback to file
+    try:
+        if "weather_service" in globals() and weather_service:
+            return weather_service.get_weather()
+    except Exception:
+        pass
     return _load_json_file(WEATHER_DATA_PATH, {})
 
 
@@ -119,6 +152,74 @@ def get_enriched_substations() -> List[Dict[str, Any]]:
 
 
 # =============================================================================
+# SINGLETON REAL-TIME SERVICES & WEBSOCKET BROADCASTER
+# =============================================================================
+
+weather_service = WeatherService(fallback_path=WEATHER_DATA_PATH)
+telemetry_service = TelemetryService(baseline_path=TRANSFORMER_DATA_PATH)
+risk_service = RiskService(
+    telemetry_service=telemetry_service,
+    weather_service=weather_service,
+    substations=get_raw_substations()
+)
+
+
+class ConnectionManager:
+    """Manages active browser WebSocket subscriptions for real-time risk updates."""
+
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket) -> None:
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: Dict[str, Any]) -> None:
+        dead = []
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                dead.append(connection)
+        for conn in dead:
+            self.disconnect(conn)
+
+
+ws_manager = ConnectionManager()
+main_event_loop: Optional[asyncio.AbstractEventLoop] = None
+
+
+def _on_mqtt_telemetry(payload: Dict[str, Any]) -> None:
+    """Invoked on MQTT background thread when telemetry arrives."""
+    updated = telemetry_service.update_from_payload(payload)
+    if updated and main_event_loop and not main_event_loop.is_closed():
+        # Recalculate fleet risk
+        new_state = risk_service.recalculate(notify=False)
+        # Schedule broadcast on FastAPI event loop safely
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(new_state), main_event_loop)
+
+
+mqtt_service = MqttService(on_telemetry_received=_on_mqtt_telemetry)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global main_event_loop
+    main_event_loop = asyncio.get_running_loop()
+    # Compute initial risk state
+    risk_service.recalculate(notify=False)
+    # Start MQTT streaming client in background
+    mqtt_service.start()
+    yield
+    # Shutdown MQTT client
+    mqtt_service.stop()
+
+
+# =============================================================================
 # FASTAPI APP INITIALIZATION
 # =============================================================================
 
@@ -128,6 +229,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS for local development with Vite/React
@@ -753,8 +855,8 @@ def health_check() -> Dict[str, Any]:
 
 @app.get("/api/weather", tags=["Telemetry"])
 def get_weather() -> Dict[str, Any]:
-    """Current live meteorological weather feed."""
-    return get_raw_weather()
+    """Current live meteorological weather feed from Open-Meteo API with offline fallback."""
+    return weather_service.get_weather()
 
 
 @app.get("/api/substations", tags=["Telemetry"])
@@ -763,102 +865,93 @@ def get_substations() -> List[Dict[str, Any]]:
     return get_enriched_substations()
 
 
+@app.get("/api/historical/incidents", tags=["Historical Data"])
+def get_historical_incidents() -> List[Dict[str, Any]]:
+    """Historical substation equipment incidents and outage records."""
+    return _load_json_file(HISTORICAL_DATA_PATH, [])
+
+
+@app.get("/api/monitoring/status", tags=["System"])
+def get_monitoring_status() -> Dict[str, Any]:
+    """Real-time system ingestion, MQTT streaming, and weather health status."""
+    api_key = os.getenv("WATSONX_API_KEY", "")
+    project_id = os.getenv("WATSONX_PROJECT_ID", "")
+    has_watsonx = bool(
+        api_key
+        and project_id
+        and api_key not in ("your_api_key_here", "your_ibm_cloud_api_key_here", "")
+    )
+    is_live = telemetry_service.is_live_active or mqtt_service.is_connected
+    return {
+        "status": "online",
+        "monitoring_mode": "LIVE" if is_live else "OFFLINE_FALLBACK",
+        "telemetry_source": "MQTT_SIMULATED_SCADA" if telemetry_service.has_received_live else "OFFLINE_JSON_BASELINE",
+        "telemetry_disclaimer": "Real-time simulated transformer sensor/SCADA telemetry",
+        "mqtt_connected": mqtt_service.is_connected,
+        "mqtt_broker": f"{mqtt_service.host}:{mqtt_service.port}",
+        "mqtt_messages_received": mqtt_service.messages_received_count,
+        "last_telemetry_timestamp": telemetry_service.last_update_timestamp,
+        "weather_source": weather_service.last_source,
+        "weather_cache_ttl_seconds": weather_service.cache_ttl,
+        "active_websocket_subscribers": len(ws_manager.active_connections),
+        "watsonx_connected": has_watsonx,
+        "granite_mode": "Online watsonx.ai" if has_watsonx else "Deterministic High-Fidelity Fallback",
+        "server_time": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.websocket("/ws/live")
+async def websocket_live_telemetry(websocket: WebSocket):
+    """
+    Full-duplex WebSocket streaming live fleet telemetry, Open-Meteo weather,
+    and recalculated composite risk scores directly to the React dashboard.
+    """
+    await ws_manager.connect(websocket)
+    try:
+        # Immediately push latest state to the newly connected frontend client
+        initial_state = risk_service.get_latest_state()
+        await websocket.send_json(initial_state)
+
+        while True:
+            msg = await websocket.receive_text()
+            if msg in ("refresh", "recalculate", "ping"):
+                updated_state = risk_service.recalculate(notify=False)
+                await websocket.send_json(updated_state)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
+
+
 @app.get("/api/risk/ranked", tags=["Risk Analysis"])
 def get_ranked_risk() -> Dict[str, Any]:
     """
     Execute comprehensive multi-variable risk engine across all transformer assets.
-    Combines IEEE C57.104 DGA, weather severity compounding, and grid criticality.
+    Combines live MQTT telemetry, Open-Meteo weather, and grid criticality.
     """
-    assets = get_raw_transformers()
-    weather = get_raw_weather()
-    substations = get_enriched_substations()
-
-    if not assets:
-        return {"summary": {}, "ranked_assets": []}
-
-    # Execute comprehensive risk synthesis
-    raw_ranked = calculate_comprehensive_risk(assets, weather, substations)
-
-    # Index raw telemetry for fast lookup
-    raw_map = {str(a.get("asset_id")): a for a in assets}
-    sub_map = {str(s.get("substation_id")): s for s in substations}
-
-    # Enrich ranked records with all UI metadata
-    enriched_ranked = [
-        _enrich_asset_record(r, raw_map, sub_map)
-        for r in raw_ranked
-    ]
-
-    # Compute high-level operational KPIs
-    critical_count = sum(1 for r in enriched_ranked if r["risk_category"] == "CRITICAL")
-    high_count = sum(1 for r in enriched_ranked if r["risk_category"] == "HIGH")
-    medium_count = sum(1 for r in enriched_ranked if r["risk_category"] == "MEDIUM")
-    low_count = sum(1 for r in enriched_ranked if r["risk_category"] == "LOW")
-
-    total_customers = sum(r.get("customers_served", 0) for r in enriched_ranked)
-    customers_at_risk = sum(
-        r.get("customers_served", 0)
-        for r in enriched_ranked
-        if r["risk_category"] in ("CRITICAL", "HIGH")
-    )
-
-    avg_score = round(sum(r["composite_risk_score"] for r in enriched_ranked) / len(enriched_ranked), 1)
-    max_score = max(r["composite_risk_score"] for r in enriched_ranked)
-
-    # Max weather multiplier across fleet
-    max_weather_mult = max((r.get("weather_multiplier", 1.0) for r in enriched_ranked), default=1.0)
-
-    summary = {
-        "total_assets": len(enriched_ranked),
-        "critical_count": critical_count,
-        "high_count": high_count,
-        "medium_count": medium_count,
-        "low_count": low_count,
-        "avg_risk_score": avg_score,
-        "max_risk_score": max_score,
-        "weather_event": weather.get("event_name", "Normal Weather"),
-        "ambient_temp_c": weather.get("ambient_temp_c", 25.0),
-        "wind_speed_kmh": weather.get("wind_speed_kmh", 15.0),
-        "lightning_strikes": weather.get("lightning_strikes_last_hour", 0),
-        "weather_multiplier": round(max_weather_mult, 2),
-        "total_customers_served": total_customers,
-        "customers_at_risk": customers_at_risk,
-    }
-
+    state = risk_service.recalculate(notify=False)
     return {
-        "summary": summary,
-        "ranked_assets": enriched_ranked,
+        "summary": state["summary"],
+        "ranked_assets": state["ranked_assets"],
     }
 
 
 @app.get("/api/assets/{asset_id}", tags=["Risk Analysis"])
 def get_asset_detail(asset_id: str) -> Dict[str, Any]:
     """Retrieve detailed telemetry and diagnostic breakdown for a specific asset."""
-    assets = get_raw_transformers()
-    target_raw = next((a for a in assets if str(a.get("asset_id")).upper() == asset_id.upper()), None)
+    state = risk_service.get_latest_state()
+    target = next((a for a in state["ranked_assets"] if str(a.get("asset_id")).upper() == asset_id.upper()), None)
 
-    if not target_raw:
+    if not target:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Asset '{asset_id}' not found in telemetry registry."
         )
 
-    weather = get_raw_weather()
-    substations = get_enriched_substations()
-
-    raw_map = {str(a.get("asset_id")): a for a in assets}
-    sub_map = {str(s.get("substation_id")): s for s in substations}
-
-    # Run single asset risk
-    ranked = calculate_comprehensive_risk([target_raw], weather, substations)
-    if not ranked:
-        raise HTTPException(status_code=500, detail="Failed to calculate risk for asset.")
-
-    enriched = _enrich_asset_record(ranked[0], raw_map, sub_map)
-    dga_eval = evaluate_dga_and_health(target_raw)
-    enriched["dga_evaluation"] = dga_eval
-
-    return enriched
+    raw_asset = telemetry_service.get_asset(asset_id) or target
+    target_copy = dict(target)
+    target_copy["dga_evaluation"] = evaluate_dga_and_health(raw_asset)
+    return target_copy
 
 
 @app.post("/api/work-order/generate", tags=["IBM Granite Copilot"])
@@ -867,37 +960,27 @@ def create_work_order(req: WorkOrderRequest) -> Dict[str, Any]:
     Invoke IBM Granite 3.0 via watsonx.ai to synthesize an emergency crew
     pre-positioning and staging work-order directive for the specified asset.
     """
-    assets = get_raw_transformers()
-    target_raw = next((a for a in assets if str(a.get("asset_id")).upper() == req.asset_id.upper()), None)
+    state = risk_service.get_latest_state()
+    target = next((a for a in state["ranked_assets"] if str(a.get("asset_id")).upper() == req.asset_id.upper()), None)
 
-    if not target_raw:
+    if not target:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Asset '{req.asset_id}' not found in telemetry registry."
         )
 
-    weather = get_raw_weather()
-    substations = get_enriched_substations()
-
-    raw_map = {str(a.get("asset_id")): a for a in assets}
-    sub_map = {str(s.get("substation_id")): s for s in substations}
-
-    ranked = calculate_comprehensive_risk([target_raw], weather, substations)
-    if not ranked:
-        raise HTTPException(status_code=500, detail="Risk calculation failed.")
-
-    enriched = _enrich_asset_record(ranked[0], raw_map, sub_map)
+    weather = state.get("weather", weather_service.get_weather())
 
     # Format the exact top_asset dictionary required by work_order_generator
     top_asset_payload = {
-        "asset_id": enriched["asset_id"],
-        "model": enriched.get("model", "Power Transformer"),
-        "substation_name": enriched.get("substation_name", enriched.get("substation_id")),
-        "final_risk_score": enriched["composite_risk_score"],
-        "category": enriched["risk_category"].capitalize(),
-        "fault_flags": enriched.get("risk_factors", ["General operational wear"]),
-        "criticality_factors": enriched.get("criticality_factors", ["Standard distribution load"]),
-        "customers": enriched.get("customers_served", 0),
+        "asset_id": target["asset_id"],
+        "model": target.get("model", "Power Transformer"),
+        "substation_name": target.get("substation_name", target.get("substation_id")),
+        "final_risk_score": target["composite_risk_score"],
+        "category": target["risk_category"].capitalize(),
+        "fault_flags": target.get("risk_factors", ["General operational wear"]),
+        "criticality_factors": target.get("criticality_factors", ["Standard distribution load"]),
+        "customers": target.get("customers_served", 0),
     }
 
     # Generate directive via IBM Granite 3.0 (with graceful offline fallback)
@@ -912,10 +995,10 @@ def create_work_order(req: WorkOrderRequest) -> Dict[str, Any]:
     model_id = os.getenv("WATSONX_MODEL_ID", "ibm/granite-3-8b-instruct")
 
     return {
-        "asset_id": enriched["asset_id"],
-        "substation_name": enriched["substation_name"],
-        "final_risk_score": enriched["composite_risk_score"],
-        "urgency": enriched["risk_category"],
+        "asset_id": target["asset_id"],
+        "substation_name": target["substation_name"],
+        "final_risk_score": target["composite_risk_score"],
+        "urgency": target["risk_category"],
         "work_order_directive": work_order_text,
         "is_live_granite": is_live_granite,
         "engine": f"IBM Granite 3.0 ({model_id} via watsonx.ai)" if is_live_granite else "IBM Granite 3.0 Template Engine (Offline)",
@@ -939,4 +1022,6 @@ def countersign_work_order(req: CountersignRequest) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("APP_PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+

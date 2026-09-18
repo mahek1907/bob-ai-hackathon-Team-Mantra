@@ -21,6 +21,8 @@ export default function Header({
   isRefreshing,
   healthStatus,
   weatherSummary,
+  monitoringStatus = 'CONNECTING',
+  lastUpdateTime = '',
   onToggleMobileSidebar,
   currentUser,
   onLogout,
@@ -119,8 +121,51 @@ export default function Header({
         </div>
       </div>
 
-      {/* Center: Live Architecture Badges */}
-      <div className="hidden xl:flex items-center gap-2 text-xs font-mono">
+      {/* Center: Live Architecture Badges & Stream Status */}
+      <div className="hidden lg:flex items-center gap-2 text-xs font-mono">
+        {/* Real-Time Stream Status Badge */}
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-all ${
+            monitoringStatus === 'LIVE'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-xs'
+              : monitoringStatus === 'CONNECTING'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-slate-100 border-slate-200 text-slate-700'
+          }`}
+          title={
+            monitoringStatus === 'LIVE'
+              ? `Real-time simulated SCADA telemetry streamed via MQTT & Open-Meteo. Last sync: ${lastUpdateTime || 'just now'}`
+              : monitoringStatus === 'CONNECTING'
+              ? 'Establishing WebSocket connection to GridSentinel AI stream...'
+              : 'Offline fallback mode active. Reading local calibrated telemetry & weather.'
+          }
+        >
+          <span className="relative flex h-2 w-2">
+            {monitoringStatus === 'LIVE' && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                monitoringStatus === 'LIVE'
+                  ? 'bg-emerald-500'
+                  : monitoringStatus === 'CONNECTING'
+                  ? 'bg-amber-500 animate-pulse'
+                  : 'bg-slate-400'
+              }`}
+            ></span>
+          </span>
+          <span className="font-bold tracking-tight">
+            {monitoringStatus === 'LIVE'
+              ? 'LIVE STREAM'
+              : monitoringStatus === 'CONNECTING'
+              ? 'CONNECTING'
+              : 'OFFLINE / FALLBACK'}
+          </span>
+          {lastUpdateTime && monitoringStatus === 'LIVE' && (
+            <span className="text-[10px] opacity-75 hidden 2xl:inline">({lastUpdateTime})</span>
+          )}
+        </div>
+
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-700">
           <Cpu className="w-3.5 h-3.5 text-blue-600" />
           <span className="font-semibold">IBM Granite 3.0</span>
@@ -141,7 +186,9 @@ export default function Header({
         {/* Clock & SCADA tag */}
         <div className="text-right font-mono text-xs hidden md:block border-r border-slate-200 pr-3">
           <div className="text-slate-800 font-semibold">{time}</div>
-          <div className="text-[10px] text-slate-400">60.02 Hz • SCADA Feed</div>
+          <div className="text-[10px] text-slate-400" title="Real-time simulated transformer sensor/SCADA telemetry">
+            60.02 Hz • {monitoringStatus === 'LIVE' ? 'Live Telemetry' : 'Offline Telemetry'}
+          </div>
         </div>
 
         {/* Notifications */}

@@ -23,7 +23,15 @@ export default function WeatherPanel({ weather, multiplier = 1.42 }) {
             <h3 className="text-sm font-bold text-slate-900">
               Meteorological Compounding
             </h3>
-            <span className="text-xs text-slate-500 font-mono">Live Doppler SCADA Feed</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs text-slate-500 font-mono">
+                {weather?.source || (weather?.is_live ? 'Open-Meteo Live API' : 'SCADA Radar Feed')}
+              </span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${weather?.is_live !== false ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                title={weather?.is_live !== false ? 'Live Open-Meteo atmospheric telemetry' : 'Offline demo fallback'}
+              />
+            </div>
           </div>
         </div>
         <span className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold border ${
@@ -63,6 +71,20 @@ export default function WeatherPanel({ weather, multiplier = 1.42 }) {
           <span className="text-[10px] font-mono text-amber-700 font-semibold">HIGH SURGE</span>
         </div>
       </div>
+
+      {/* Environmental Supplementary Metrics (Open-Meteo) */}
+      {(weather?.relative_humidity_pct != null || weather?.precipitation_mm != null) && (
+        <div className="grid grid-cols-2 gap-2 text-center text-[11px] font-mono">
+          <div className="p-1.5 rounded-md bg-slate-50/80 border border-slate-200 text-slate-600 flex items-center justify-between px-2.5">
+            <span className="text-slate-500">Humidity</span>
+            <span className="font-bold text-slate-800">{weather.relative_humidity_pct}%</span>
+          </div>
+          <div className="p-1.5 rounded-md bg-slate-50/80 border border-slate-200 text-slate-600 flex items-center justify-between px-2.5">
+            <span className="text-slate-500">Precipitation</span>
+            <span className="font-bold text-slate-800">{weather.precipitation_mm ?? 0} mm</span>
+          </div>
+        </div>
+      )}
 
       {/* Multiplier Progress Bar */}
       <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2 text-xs">

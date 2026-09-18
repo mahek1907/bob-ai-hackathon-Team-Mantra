@@ -50,8 +50,12 @@ export default function WeatherPage({ weather, multiplier = 1.42, assets = [] })
           <div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
               <span>Weather & Environmental Stress Monitoring</span>
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                SCADA Radar
+              <span className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md border ${
+                weather?.is_live !== false
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              }`}>
+                {weather?.source || 'Open-Meteo Live API'}
               </span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
@@ -170,6 +174,10 @@ export default function WeatherPage({ weather, multiplier = 1.42, assets = [] })
             </p>
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono space-y-1.5 text-slate-700">
               <div className="flex justify-between">
+                <span className="text-slate-500">Data Source:</span>
+                <span className="text-blue-700 font-bold">{weather?.source || 'Open-Meteo Live API'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-500">Storm Severity Index:</span>
                 <span className="text-amber-700 font-bold">{stormSeverity} / 10.0</span>
               </div>
@@ -181,6 +189,24 @@ export default function WeatherPage({ weather, multiplier = 1.42, assets = [] })
                 <span className="text-slate-500">Grid Surge Warning:</span>
                 <span className="text-amber-700 font-bold">STAGE 2 ELEVATED</span>
               </div>
+              {weather?.relative_humidity_pct != null && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Relative Humidity:</span>
+                  <span className="text-slate-900 font-bold">{weather.relative_humidity_pct}%</span>
+                </div>
+              )}
+              {weather?.surface_pressure_hpa != null && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Surface Pressure:</span>
+                  <span className="text-slate-900 font-bold">{weather.surface_pressure_hpa} hPa</span>
+                </div>
+              )}
+              {weather?.precipitation_mm != null && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Precipitation:</span>
+                  <span className="text-slate-900 font-bold">{weather.precipitation_mm} mm</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

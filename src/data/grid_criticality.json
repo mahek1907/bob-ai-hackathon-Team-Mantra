@@ -1,34 +1,42 @@
 [
-{
-"substation_id": "SUB-METRO-09",
-"name": "Metro Central Transit Substation",
-"customers_served": 85000,
-"hospital_connected": true,
-"water_plant_connected": true,
-"transit_connected": true
-},
-{
-"substation_id": "SUB-NORTH-01",
-"name": "North Regional Healthcare Hub",
-"customers_served": 45000,
-"hospital_connected": true,
-"water_plant_connected": false,
-"transit_connected": false
-},
-{
-"substation_id": "SUB-WEST-02",
-"name": "Harbor Industrial Step-Down",
-"customers_served": 38000,
-"hospital_connected": false,
-"water_plant_connected": true,
-"transit_connected": false
-},
-{
-"substation_id": "SUB-EAST-04",
-"name": "Pine Crest Residential Feeder",
-"customers_served": 22000,
-"hospital_connected": false,
-"water_plant_connected": false,
-"transit_connected": false
-}
+  {
+    "substation_id": "SUB-METRO-09",
+    "name": "Metro Central Transit Substation",
+    "customers_served": 85000,
+    "hospital_connected": true,
+    "water_plant_connected": true,
+    "transit_connected": true,
+    "latitude": 40.7128,
+    "longitude": -74.0060
+  },
+  {
+    "substation_id": "SUB-NORTH-01",
+    "name": "North Regional Healthcare Hub",
+    "customers_served": 45000,
+    "hospital_connected": true,
+    "water_plant_connected": false,
+    "transit_connected": false,
+    "latitude": 40.7831,
+    "longitude": -73.9712
+  },
+  {
+    "substation_id": "SUB-WEST-02",
+    "name": "Harbor Industrial Step-Down",
+    "customers_served": 38000,
+    "hospital_connected": false,
+    "water_plant_connected": true,
+    "transit_connected": false,
+    "latitude": 40.6892,
+    "longitude": -74.0445
+  },
+  {
+    "substation_id": "SUB-EAST-04",
+    "name": "Pine Crest Residential Feeder",
+    "customers_served": 22000,
+    "hospital_connected": false,
+    "water_plant_connected": false,
+    "transit_connected": false,
+    "latitude": 40.7282,
+    "longitude": -73.7949
+  }
 ]

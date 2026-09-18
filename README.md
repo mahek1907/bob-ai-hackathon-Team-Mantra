@@ -202,19 +202,42 @@ The project separates numerical analysis from generative AI:
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Real-Time System Architecture
 
 ```mermaid
 graph TD
-    A["Operator / Browser"] -->|"Interactive UI"| B["React Frontend (Vite + Tailwind)"]
-    B -->|"REST API Calls"| C["FastAPI Server (src/server.py)"]
-    C --> D["Risk & DGA Engine (IEEE C57.104)"]
-    C --> E["Weather Severity & Criticality Engines"]
-    C --> F["IBM Granite 3.0 via watsonx.ai"]
-    C --> G["JSON Telemetry Files (SCADA Simulation)"]
-    F -->|"Draft Work Order"| C
-    C -->|"JSON Response"| B
-    B -->|"Operator Review & Countersign"| H["Approved Dispatch Directive"]
+    subgraph "External Real-Time Data Sources"
+        OM["Open-Meteo REST API<br/>(Live Atmospheric Telemetry)"]
+        SIM["Telemetry Simulator<br/>(src/telemetry_publisher.py)"]
+        BROKER[("HiveMQ MQTT Broker<br/>(broker.hivemq.com:1883)")]
+        SIM -->|"grid/transformers/{id}/telemetry"| BROKER
+    end
+
+    subgraph "GridSentinel AI Backend (FastAPI)"
+        MQTT_SUB["MqttService<br/>(Paho-MQTT Background Worker)"]
+        BROKER -->|Streaming SCADA Telemetry| MQTT_SUB
+        W_SVC["WeatherService<br/>(Open-Meteo Ingestion + TTL Cache)"]
+        OM -->|Live GPS Forecast & Radar| W_SVC
+        TELEM_REG["TelemetryService<br/>(In-Memory SCADA Registry)"]
+        MQTT_SUB -->|Normalize, Alias Map & Clamp| TELEM_REG
+        RISK["RiskService<br/>(Dynamic Multi-Variable Engine)"]
+        TELEM_REG --> RISK
+        W_SVC --> RISK
+        DGA["IEEE C57.104 DGA Engine"] --> RISK
+        CRIT["Grid Criticality Topology"] --> RISK
+        WS_HUB["FastAPI WebSocket Hub<br/>(/ws/live)"]
+        RISK -->|Broadcast Re-Ranked State| WS_HUB
+        GRANITE["IBM Granite 3.0 via watsonx.ai<br/>(Emergency Work Order Copilot)"]
+        RISK -.->|Top Hazard Asset| GRANITE
+        FALLBACK[("Offline Local Datasets<br/>(JSON & Static Templates)")] -.->|Automatic Failover| RISK
+    end
+
+    subgraph "Frontend Console (React 18 + Vite)"
+        UI["Grid Operations Console<br/>(Real-Time WebSocket Client)"]
+        WS_HUB -->|Live Telemetry & Fleet Ranking| UI
+        GRANITE -->|Advisory Dispatch Directive| UI
+        OPERATOR["Certified Grid Dispatcher"] -->|Review & Countersign| UI
+    end
 ```
 
 ---
@@ -224,41 +247,46 @@ graph TD
 ```text
 bob-ai-hackathon-Team-Mantra/
 │
-├── frontend/                     ← React 18 + Vite single-page dashboard
+├── frontend/                     ← React 18 + Vite real-time operations console
 │   ├── src/
-│   │   ├── components/           ← KPI cards, Asset table, Modal, Gauges
-│   │   ├── App.jsx               ← Main interactive dashboard view
+│   │   ├── components/           ← Header (Live Badge), WeatherPanel, Asset table, Modal
+│   │   ├── pages/                ← OverviewPage, FleetPage, WeatherPage, CriticalityPage
+│   │   ├── App.jsx               ← Native WebSocket (/ws/live) client & state sync
 │   │   └── index.css             ← Tailwind CSS styling
 │   ├── package.json
-│   └── vite.config.js
+│   └── vite.config.js            ← WebSocket proxy (/ws -> backend:8000)
 │
-├── src/                          ← Backend API and analytical engines
-│   ├── server.py                 ← FastAPI application and REST endpoints
+├── src/                          ← Backend API and analytical services
+│   ├── server.py                 ← FastAPI app, WebSocket hub, REST endpoints
+│   ├── telemetry_publisher.py    ← Standalone demo simulator for streaming SCADA telemetry
+│   ├── services/                 ← Real-time streaming services layer
+│   │   ├── mqtt_service.py       ← Paho-MQTT subscriber (broker.hivemq.com)
+│   │   ├── telemetry_service.py  ← In-memory SCADA telemetry registry & schema mapper
+│   │   ├── weather_service.py    ← Open-Meteo REST API client & TTL caching
+│   │   └── risk_service.py       ← Dynamic multi-variable risk & fleet re-ranking
 │   ├── dga_engine.py             ← IEEE C57.104 dissolved gas analysis
 │   ├── weather_engine.py         ← Meteorological compounding multiplier
 │   ├── criticality_engine.py     ← Substation grid impact scoring
-│   ├── risk_engine.py            ← Composite risk ranking engine
-│   ├── work_order_generator.py   ← IBM Granite 3.0 watsonx.ai integration
-│   ├── data/                     ← Simulated SCADA telemetry datasets
+│   ├── risk_engine.py            ← Composite risk calculation & prioritization
+│   ├── work_order_generator.py   ← IBM Granite 3.0 watsonx.ai integration & offline template
+│   ├── data/                     ← Calibration baselines & incident logs
 │   │   ├── transformer_telemetry.json
 │   │   ├── weather_data.json
-│   │   └── grid_criticality.json
-│   └── requirements.txt          ← Python dependencies
+│   │   ├── grid_criticality.json
+│   │   └── historical_incidents.json
+│   └── requirements.txt          ← Python dependencies (FastAPI, paho-mqtt, websockets)
 │
-├── docs/                         ← Hackathon documentation
-│   ├── problem-statement.md
-│   ├── solution-overview.md
-│   ├── architecture.md
-│   └── setup-guide.md
+├── tests/                        ← Comprehensive automated test suite (147 tests)
+│   ├── test_mqtt_telemetry.py    ← Telemetry parsing, schema aliases, and MQTT resilience
+│   ├── test_weather_service.py   ← Open-Meteo parsing, caching, and fallback handling
+│   ├── test_risk_recalculation.py← Real-time risk recalculation & re-ranking
+│   ├── test_offline_fallback.py  ← Full offline operation & graceful degradation
+│   ├── test_dga_engine.py        ← IEEE C57.104 gas interpretation tests
+│   ├── test_risk_engine.py       ← Analytical formula tests
+│   └── test_weather_engine.py    ← Compounding physics tests
 │
-├── demo/                         ← Video and deployed demo links
-│   ├── screenshots/
-│   ├── demo-video-link.txt
-│   └── live-demo-url.txt
-│
-├── presentation/                 ← Hackathon presentation deck
-│   └── slides.pdf
-│
+├── docs/                         ← Architecture and technical documentation
+├── demo/                         ← Screenshots, video, and live demo links
 ├── submission.yaml               ← Hackathon evaluation metadata
 └── README.md                     ← Project documentation entry point
 ```
@@ -274,7 +302,7 @@ git clone https://github.com/mahek1907/bob-ai-hackathon-Team-Mantra.git
 cd bob-ai-hackathon-Team-Mantra
 ```
 
-### 2. Backend Setup (FastAPI)
+### 2. Backend Setup (FastAPI & Real-Time Engine)
 
 ```bash
 # Create and activate virtual environment
@@ -287,13 +315,17 @@ python -m venv venv
 # Install backend dependencies
 pip install -r src/requirements.txt
 
-# Start the FastAPI backend server
+# Configure environment variables (optional - defaults to public HiveMQ & Open-Meteo)
+copy .env.example .env
+
+# Start the FastAPI backend server with WebSocket support
 uvicorn src.server:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000` (API documentation at `http://localhost:8000/docs`).
+The API will be available at `http://localhost:8000` (Swagger UI at `http://localhost:8000/docs`).
+The real-time WebSocket endpoint is active at `ws://localhost:8000/ws/live`.
 
-### 3. Frontend Setup (React + Vite)
+### 3. Frontend Setup (React 18 + Vite)
 
 In a separate terminal:
 
@@ -303,7 +335,26 @@ npm install
 npm run dev
 ```
 
-The interactive dashboard will open at `http://localhost:5173`.
+The interactive dashboard will open at `http://localhost:5173`. The header will immediately connect to the WebSocket stream and show `● LIVE STREAM`.
+
+### 4. Real-Time Telemetry Simulator (MQTT Streaming Demo)
+
+In a third terminal, launch the standalone telemetry publisher to stream simulated SCADA sensor telemetry:
+
+```bash
+# Run simulator streaming physical drift (temperature, vibration, DGA arcing gases)
+python src/telemetry_publisher.py --interval 3
+```
+
+Watch the dashboard dynamically update transformer thermal levels, DGA ratios, and real-time fleet risk rankings without refreshing the browser!
+
+### 5. Run Automated Test Suite
+
+```bash
+python -m pytest tests/ -v
+```
+
+All 147 tests (DGA physics, weather compounding, MQTT ingestion, Open-Meteo API, dynamic risk re-ranking, and offline fallback) will run and pass.
 
 ---
 
@@ -314,6 +365,9 @@ The backend requirements (`src/requirements.txt`):
 ```text
 fastapi>=0.110.0
 uvicorn>=0.28.0
+websockets>=12.0
+paho-mqtt>=2.0.0
+requests>=2.31.0
 pydantic>=2.6.0
 python-dotenv>=1.0.0
 pandas>=2.0.0
@@ -405,23 +459,19 @@ A real-world deployment would require:
 
 ---
 
-## ⚠️ Known Limitations
+## ⚠️ Prototype Scope & Engineering Disclaimers
 
-### 1. Batch Telemetry Ingestion
+### 1. Real-Time Simulated SCADA Telemetry (Implemented via MQTT)
 
-The current prototype processes JSON telemetry files instead of continuously receiving high-frequency SCADA or IEC 61850 streams.
+The platform now supports continuous real-time streaming via standard MQTT topics (`grid/transformers/{id}/telemetry`) and WebSocket pushing to the UI. For hackathon demonstration purposes, the telemetry streams are generated by a high-fidelity physical simulator (`src/telemetry_publisher.py`) rather than a direct connection to live utility SCADA/RTU hardware.
 
-### 2. Simulated Data
+### 2. Live Open-Meteo Meteorological API (Implemented)
 
-The demonstration uses simulated or prepared datasets. The system has not been validated against a utility's historical transformer failure records.
+Live weather conditions (ambient temperature, convective wind gusts, surface pressure, humidity, precipitation, and derived lightning strike rates) are continuously ingested in real-time from the Open-Meteo REST API, with automated fallback to local JSON scenarios if internet access is interrupted.
 
-### 3. Simplified DGA Rules
+### 3. Calibrated IEEE C57.104 DGA Rules
 
-The DGA engine uses configurable prototype rules and does not provide a complete transformer diagnostic assessment.
-
-### 4. Weather Data
-
-The current version may use prepared weather scenarios instead of a continuously updated meteorological API.
+The DGA engine applies standardized IEEE C57.104 gas concentration boundaries and Rogers/Doernenburg ratios. It serves as an advisory decision-support assistant and does not replace certified laboratory oil sample chromatography.
 
 ### 5. Limited Grid Topology
 
