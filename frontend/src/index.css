@@ -314,3 +314,116 @@ code, pre {
 .animated-border {
   border: 1px solid #e2e8f0;
 }
+
+/* ---------- Electrical Spark & Auth Animations ---------- */
+@keyframes sparkRealisticBurst {
+  0%, 70%, 100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  74% {
+    opacity: 0.35;
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+  }
+  78% {
+    opacity: 0.95;
+    transform: scale(1.15) rotate(3deg);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)) drop-shadow(0 0 16px rgba(0, 229, 255, 0.8));
+  }
+  81% {
+    opacity: 0.3;
+    transform: scale(0.9) rotate(-2deg);
+  }
+  84% {
+    opacity: 1;
+    transform: scale(1.2) rotate(4deg);
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1)) drop-shadow(0 0 20px rgba(37, 99, 235, 0.9));
+  }
+  88% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  92% {
+    opacity: 0.1;
+    transform: scale(0.7);
+  }
+  95% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+.animate-spark-burst-1 {
+  animation: sparkRealisticBurst 4.5s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.animate-spark-burst-2 {
+  animation: sparkRealisticBurst 5.4s ease-in-out infinite;
+  animation-delay: 2.2s;
+}
+
+.animate-spark-burst-3 {
+  animation: sparkRealisticBurst 6.1s ease-in-out infinite;
+  animation-delay: 3.8s;
+}
+
+@keyframes lineEnergyFlow {
+  0% {
+    stroke-dashoffset: 120;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-line-energy {
+  stroke-dasharray: 8 16;
+  animation: lineEnergyFlow 12s linear infinite;
+}
+
+@keyframes nodeGlowPulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.25);
+  }
+}
+
+.animate-node-glow {
+  animation: nodeGlowPulse 3.5s ease-in-out infinite;
+}
+
+@keyframes authCardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-entrance {
+  animation: authCardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spark-burst-1,
+  .animate-spark-burst-2,
+  .animate-spark-burst-3,
+  .animate-line-energy,
+  .animate-node-glow,
+  .animate-card-entrance {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+

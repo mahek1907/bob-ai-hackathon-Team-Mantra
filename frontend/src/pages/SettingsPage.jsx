@@ -119,7 +119,7 @@ export default function SettingsPage({ currentUser, onLogout }) {
 
             <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200">
               <span className="text-slate-500 uppercase text-[10px] block font-bold tracking-wider">Grid Authority</span>
-              <span className="font-semibold text-slate-800 mt-0.5 block">{currentUser?.org || 'Metro Power Authority'}</span>
+              <span className="font-semibold text-slate-800 mt-0.5 block">{currentUser?.org || currentUser?.organization || 'Metro Power Authority'}</span>
             </div>
           </div>
 

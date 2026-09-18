@@ -212,8 +212,8 @@ export default function Header({
               <div className="text-xs font-semibold text-slate-900 leading-tight">
                 {currentUser?.name || 'Elena Vance'}
               </div>
-              <div className="text-[10px] text-slate-500">
-                {currentUser?.role?.split(' ')[0] || 'Dispatcher'}
+              <div className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                {currentUser?.role || 'Dispatcher'}
               </div>
             </div>
             <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
@@ -224,8 +224,9 @@ export default function Header({
               <div className="border-b border-slate-100 pb-2">
                 <div className="font-semibold text-slate-900">{currentUser?.name || 'Elena Vance'}</div>
                 <div className="text-slate-500 font-mono text-[11px] truncate">{currentUser?.email}</div>
+                <div className="text-blue-600 text-[11px] font-medium mt-0.5">{currentUser?.role || 'Senior Reliability Dispatcher'}</div>
                 <div className="mt-1 text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 inline-block">
-                  {currentUser?.org || 'Metro Power Authority'}
+                  {currentUser?.org || currentUser?.organization || 'Metro Power Authority'}
                 </div>
               </div>
 
