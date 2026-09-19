@@ -143,11 +143,12 @@ export default function App() {
 
   // Work Order Generation State
   const [selectedAsset, setSelectedAsset] = useState(INITIAL_ASSETS[0]);
+  const [userPinnedAsset, setUserPinnedAsset] = useState(false);
   const [workOrderDirective, setWorkOrderDirective] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLiveGranite, setIsLiveGranite] = useState(false);
-  const [engineName, setEngineName] = useState('IBM Granite 3.0');
+  const [engineName, setEngineName] = useState('IBM Granite 3.0 — Template Fallback');
 
   // Real-time WebSocket connection to /ws/live
   useEffect(() => {
@@ -175,6 +176,17 @@ export default function App() {
           if (isCancelled) return;
           try {
             const data = JSON.parse(event.data);
+
+            // 1. Dedicated directive update event
+            if (data.type === 'directive_updated' && data.directive) {
+              const dir = data.directive;
+              setWorkOrderDirective(dir.directive_text || dir.work_order_directive || '');
+              setIsLiveGranite(Boolean(dir.is_live_granite));
+              setEngineName(dir.engine || (dir.is_live_granite ? 'IBM Granite 3.0 — Live' : 'IBM Granite 3.0 — Template Fallback'));
+              return;
+            }
+
+            // 2. Full fleet risk state update
             if (data && data.ranked_assets && data.ranked_assets.length > 0) {
               setAssets(data.ranked_assets);
               if (data.summary) setSummary(data.summary);
@@ -185,12 +197,23 @@ export default function App() {
               const now = new Date();
               setLastUpdateTime(now.toLocaleTimeString());
 
-              // Preserve active asset selection if available
+              // Target asset selection:
+              // Dynamically track highest-hazard asset unless user explicitly pinned another unit
               setSelectedAsset(prev => {
-                if (!prev) return data.ranked_assets[0];
-                const match = data.ranked_assets.find(a => a.asset_id === prev.asset_id);
-                return match || data.ranked_assets[0];
+                if (userPinnedAsset && prev) {
+                  const match = data.ranked_assets.find(a => a.asset_id === prev.asset_id);
+                  return match || data.ranked_assets[0];
+                }
+                return data.ranked_assets[0];
               });
+
+              // Dynamic directive update from full_state
+              if (data.active_directive) {
+                const dir = data.active_directive;
+                setWorkOrderDirective(dir.directive_text || dir.work_order_directive || '');
+                setIsLiveGranite(Boolean(dir.is_live_granite));
+                setEngineName(dir.engine || (dir.is_live_granite ? 'IBM Granite 3.0 — Live' : 'IBM Granite 3.0 — Template Fallback'));
+              }
             }
           } catch (err) {
             console.error('[GridSentinel WebSocket] Error parsing message payload:', err);
@@ -382,38 +405,63 @@ export default function App() {
 
       if (res.ok) {
         const data = await res.json();
-        setWorkOrderDirective(data.work_order_directive);
+        setWorkOrderDirective(data.work_order_directive || data.directive_text);
         setIsLiveGranite(data.is_live_granite);
         setEngineName(data.engine);
       } else {
         throw new Error('API returned error');
       }
     } catch (err) {
-      // Deterministic offline fallback directive
+      // Dynamic client-side fallback directive using current asset telemetry & risk
       setTimeout(() => {
+        const oilTemp = target.oil_temp_c ?? target.telemetry_snapshot?.oil_temperature ?? 75.0;
+        const loadPct = target.load_pct ?? target.telemetry_snapshot?.electrical_load_pct ?? 65.0;
+        const c2h2 = target.dga_ppm?.acetylene ?? target.telemetry_snapshot?.c2h2_ppm ?? 0.0;
+        const c2h4 = target.dga_ppm?.ethylene ?? target.telemetry_snapshot?.c2h4_ppm ?? 0.0;
+        const h2 = target.dga_ppm?.hydrogen ?? target.telemetry_snapshot?.hydrogen_ppm ?? 0.0;
+        const score = target.composite_risk_score ?? 0;
+        const tier = target.risk_category || 'NORMAL';
+        const loc = target.substation_name || target.substation_id || 'Substation';
+
+        let interventionText = `1. PREVENTIVE FIELD INSPECTION: Calculated priority is ${score}/100 (${tier}). Schedule on-site technical inspection within 4-6 hours.`;
+        if (score >= 80 || tier === 'CRITICAL') {
+          if (c2h2 >= 35) {
+            interventionText = `1. IMMEDIATE ELECTRICAL ARCING SUPPRESSION: Acetylene concentration is at ${c2h2} ppm (critical threshold exceeded). Dispatch High-Voltage Rapid Response Crew #3 to ${loc} within 30 minutes with mobile degasification unit.\n\n2. EMERGENCY SCADA OFFLOADING: Shed at least 40% of electrical load from ${target.asset_id} to parallel feeds to arrest arcing progression.`;
+          } else {
+            interventionText = `1. CRITICAL THERMAL RUNAWAY MITIGATION: Top-oil temperature is elevated at ${oilTemp}°C under ${loadPct}% loading. Engage all auxiliary forced-air cooling fan banks.\n\n2. SCADA LOAD REDISTRIBUTION: Transfer electrical load to parallel feeds and deploy field crew with infrared camera to inspect 345kV bushings.`;
+          }
+        }
+
         setWorkOrderDirective(
 `### OPERATIONAL PRE-POSITIONING DIRECTIVE
-Target Asset: ${target.asset_id} | Location: ${target.substation_name || target.substation_id}
-Calculated Risk Priority: ${target.composite_risk_score}/100 (${target.risk_category} Urgency)
+**Priority:** ${tier} PRIORITY
+**Target Transformer:** ${target.asset_id} (${target.model || 'High-Voltage Power Transformer'}) | **Location:** ${loc}
+**Current Calculated Risk Score:** ${score}/100
+**Current Risk Level:** ${tier}
 
-#### 1. Root Cause Summary
-- IEEE C57.104 Gas Signature: ${target.risk_factors ? target.risk_factors.join('; ') : 'Severe Dissolved Combustible Gas Accumulation'}
-- Weather Compounding: ${weather?.event_name || 'Tropical Storm Alex'} at ${weather?.ambient_temp_c || 39.4}°C with ${weather?.wind_speed_kmh || 85} km/h gusts.
-- Topological Vulnerability: Feeds ${(target.customers_served || 85000).toLocaleString()} customers including Trauma Center Hospital & Electrified Transit.
+#### 1. Root-Cause & Active Risk Factors
+- **Standards-Informed DGA Interpretation:** ${target.risk_factors && target.risk_factors.length > 0 ? target.risk_factors.join('; ') : 'Operational gas monitoring active'} (C2H2=${c2h2} ppm, C2H4=${c2h4} ppm, H2=${h2} ppm)
+- **Operational SCADA Telemetry:** Top-Oil Temp: ${oilTemp}°C, Electrical Load: ${loadPct}%, Vibration: ${target.vibration_mms ?? 2.5} mm/s.
+- **Weather Compounding:** ${weather?.event_name || 'Active Weather'} at ${weather?.ambient_temp_c || 25}°C with ${weather?.wind_speed_kmh || 15} km/h gusts (${target.weather_multiplier ?? 1.0}x stress multiplier).
+- **Grid Criticality & Impact:** Feeds ${(target.customers_served || 85000).toLocaleString()} customers with critical priority feeds.
 
-#### 2. Crew Pre-Positioning Directive
-- Staging Depot: Pre-position High-Voltage Rapid Response Crew #3 near ${target.substation_name || target.substation_id}.
-- Required Equipment: Mobile degasification trailer, acoustic partial-discharge ultrasonic analyzer, FLIR high-res infrared thermal camera.
-- Spare Parts on Hot Standby: Replacement 345kV bushing set, radiator cooling fan relay, spare silica gel breathers.
+#### 2. RECOMMENDED INTERVENTION
+${interventionText}
 
-#### 3. Preventive Load Mitigation
-- Initiate automated SCADA contingency tie-line switching to offload auxiliary feeds ahead of storm peak.
-- Notify regional emergency dispatch of potential short-duration switching maneuvers.
+#### 3. Crew Requirement & Pre-Positioning
+- **Crew Allocation:** Rapid Response Substation Crew assigned to ${loc}.
+- **Pre-Positioning Directive:** Pre-position emergency crew and mobile diagnostic equipment near ${loc}.
+- **Required Diagnostic Tools:** Acoustic partial-discharge analyzer, FLIR high-res infrared thermal camera, oil breakdown tester.
+- **Spare Parts on Hot Standby:** Replacement bushing assembly and radiator cooling fan relay bank.
 
-#### 4. Sign-Off Notice
-Human-in-the-Loop Mandate: Generated by IBM Granite 3.0 via IBM watsonx.ai. A certified utility grid operator must review and countersign before dispatch.`);
+#### 4. Safety Considerations & Urgency
+- **Reason for Urgency:** Current composite risk score requires priority operational field intervention.
+- **Safety Safeguards:** Maintain 25-meter exclusion boundary; verify remote SCADA trip coil interlocks prior to yard entry.
+
+#### 5. Human Review & Approval Mandate
+*Mandatory Advisory Notice: This is an AI-assisted operational recommendation produced by IBM Granite 3.0 — Template Fallback. All SCADA switching, equipment isolation, and physical field crew dispatch require certified utility grid operator review and digital countersignature before execution.*`);
         setIsLiveGranite(false);
-        setEngineName('IBM Granite 3.0 Template Engine (Offline Mode)');
+        setEngineName('IBM Granite 3.0 — Template Fallback');
       }, 700);
     } finally {
       setIsGenerating(false);

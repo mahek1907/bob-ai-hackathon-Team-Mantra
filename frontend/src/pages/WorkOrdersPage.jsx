@@ -159,7 +159,7 @@ export default function WorkOrdersPage({
                 : 'bg-slate-100 text-slate-700 border-slate-200'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isLiveGranite ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-              {isLiveGranite ? 'IBM Granite 3.0 (watsonx.ai Active)' : 'Offline Recommendation Mode'}
+              {isLiveGranite ? 'IBM Granite 3.0 — Live' : 'IBM Granite 3.0 — Template Fallback'}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-medium">
@@ -530,11 +530,11 @@ export default function WorkOrdersPage({
                 Active Decision Evidence Factors ({currentAsset?.risk_factors?.length || 0} Identified):
               </span>
               <div className="space-y-1.5">
-                {(currentAsset?.risk_factors || [
-                  'High acetylene (C2H2: 85.0 ppm) indicates severe electrical arcing risk',
-                  'High ethylene (C2H4: 280.0 ppm) indicates thermal overheating',
-                  'Critical equipment physical degradation score (95.9/100)',
-                  'Active tropical storm weather alert with elevated wind shear'
+                {(currentAsset?.risk_factors && currentAsset.risk_factors.length > 0 ? currentAsset.risk_factors : [
+                  `Calculated composite risk score: ${currentAsset?.composite_risk_score ?? 0}/100 (${currentAsset?.risk_category || 'NORMAL'})`,
+                  `Operational Top-Oil Temperature: ${currentAsset?.oil_temp_c ?? 75.0}°C`,
+                  `Electrical load demand: ${currentAsset?.load_pct ?? 65.0}%`,
+                  `IEEE standards-informed DGA: ${currentAsset?.dga_status || 'Condition 1'}`
                 ]).slice(0, 5).map((factor, idx) => (
                   <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
@@ -646,10 +646,10 @@ export default function WorkOrdersPage({
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
                 <Cpu className="w-4 h-4 text-slate-500" />
-                <span>Deterministic Fallback Active</span>
+                <span>IBM Granite 3.0 — Template Fallback</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Work-order directives are currently being synthesized using the deterministic offline fallback template engine. When watsonx credentials are configured, live Granite 3.0 inference engages automatically.
+                Work-order directives are currently being synthesized using the dynamic context-aware fallback engine. When watsonx credentials are configured, live Granite 3.0 inference engages automatically.
               </p>
             </div>
           )}

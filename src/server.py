@@ -197,10 +197,18 @@ def _on_mqtt_telemetry(payload: Dict[str, Any]) -> None:
     """Invoked on MQTT background thread when telemetry arrives."""
     updated = telemetry_service.update_from_payload(payload)
     if updated and main_event_loop and not main_event_loop.is_closed():
-        # Recalculate fleet risk
+        # Recalculate fleet risk & dynamic directive
         new_state = risk_service.recalculate(notify=False)
         # Schedule broadcast on FastAPI event loop safely
         asyncio.run_coroutine_threadsafe(ws_manager.broadcast(new_state), main_event_loop)
+        # If directive was updated or regenerated, broadcast dedicated directive_updated event
+        if new_state.get("directive_updated") and new_state.get("active_directive"):
+            directive_event = {
+                "type": "directive_updated",
+                "timestamp": new_state["active_directive"]["directive_generated_at"],
+                "directive": new_state["active_directive"]
+            }
+            asyncio.run_coroutine_threadsafe(ws_manager.broadcast(directive_event), main_event_loop)
 
 
 mqtt_service = MqttService(on_telemetry_received=_on_mqtt_telemetry)
@@ -210,8 +218,8 @@ mqtt_service = MqttService(on_telemetry_received=_on_mqtt_telemetry)
 async def lifespan(app: FastAPI):
     global main_event_loop
     main_event_loop = asyncio.get_running_loop()
-    # Compute initial risk state
-    risk_service.recalculate(notify=False)
+    # Compute initial risk state and baseline directive
+    risk_service.recalculate(notify=False, force_directive=True)
     # Start MQTT streaming client in background
     mqtt_service.start()
     yield
@@ -957,8 +965,9 @@ def get_asset_detail(asset_id: str) -> Dict[str, Any]:
 @app.post("/api/work-order/generate", tags=["IBM Granite Copilot"])
 def create_work_order(req: WorkOrderRequest) -> Dict[str, Any]:
     """
-    Invoke IBM Granite 3.0 via watsonx.ai to synthesize an emergency crew
-    pre-positioning and staging work-order directive for the specified asset.
+    Invoke IBM Granite 3.0 via watsonx.ai (or dynamic context-aware fallback)
+    to synthesize an emergency crew pre-positioning and staging work-order directive
+    for the specified asset.
     """
     state = risk_service.get_latest_state()
     target = next((a for a in state["ranked_assets"] if str(a.get("asset_id")).upper() == req.asset_id.upper()), None)
@@ -969,41 +978,18 @@ def create_work_order(req: WorkOrderRequest) -> Dict[str, Any]:
             detail=f"Asset '{req.asset_id}' not found in telemetry registry."
         )
 
-    weather = state.get("weather", weather_service.get_weather())
+    directive_payload = risk_service.generate_directive_for_asset(req.asset_id, force=True)
 
-    # Format the exact top_asset dictionary required by work_order_generator
-    top_asset_payload = {
-        "asset_id": target["asset_id"],
-        "model": target.get("model", "Power Transformer"),
-        "substation_name": target.get("substation_name", target.get("substation_id")),
-        "final_risk_score": target["composite_risk_score"],
-        "category": target["risk_category"].capitalize(),
-        "fault_flags": target.get("risk_factors", ["General operational wear"]),
-        "criticality_factors": target.get("criticality_factors", ["Standard distribution load"]),
-        "customers": target.get("customers_served", 0),
-    }
+    # Broadcast updated directive to connected WebSocket clients in real-time
+    if main_event_loop and not main_event_loop.is_closed():
+        directive_event = {
+            "type": "directive_updated",
+            "timestamp": directive_payload["directive_generated_at"],
+            "directive": directive_payload,
+        }
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(directive_event), main_event_loop)
 
-    # Generate directive via IBM Granite 3.0 (with graceful offline fallback)
-    work_order_text = generate_granite_work_order(top_asset_payload, weather)
-    api_key = os.getenv("WATSONX_API_KEY", "")
-    project_id = os.getenv("WATSONX_PROJECT_ID", "")
-    is_live_granite = bool(
-        api_key
-        and project_id
-        and api_key not in ("your_api_key_here", "your_ibm_cloud_api_key_here", "")
-    )
-    model_id = os.getenv("WATSONX_MODEL_ID", "ibm/granite-3-8b-instruct")
-
-    return {
-        "asset_id": target["asset_id"],
-        "substation_name": target["substation_name"],
-        "final_risk_score": target["composite_risk_score"],
-        "urgency": target["risk_category"],
-        "work_order_directive": work_order_text,
-        "is_live_granite": is_live_granite,
-        "engine": f"IBM Granite 3.0 ({model_id} via watsonx.ai)" if is_live_granite else "IBM Granite 3.0 Template Engine (Offline)",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-    }
+    return directive_payload
 
 
 @app.post("/api/work-order/countersign", tags=["IBM Granite Copilot"])
