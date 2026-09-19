@@ -47,10 +47,14 @@ class RiskService:
         self,
         telemetry_service: TelemetryService,
         weather_service: WeatherService,
-        substations: Optional[List[Dict[str, Any]]] = None
+        substations: Optional[List[Dict[str, Any]]] = None,
+        config_service: Optional[Any] = None,
     ):
         self.telemetry = telemetry_service
         self.weather_svc = weather_service
+        self.config_service = config_service
+        if self.config_service is not None:
+            self.config_service.register_listener(self._on_configuration_changed)
 
         if substations is None:
             sub_path = Path(__file__).resolve().parent.parent / "data" / "grid_criticality.json"
@@ -96,6 +100,15 @@ class RiskService:
     def unregister_listener(self, callback: Callable[[Dict[str, Any]], Any]) -> None:
         if callback in self._listeners:
             self._listeners.remove(callback)
+
+    def recalculate_on_config_change(self) -> Dict[str, Any]:
+        """Recalculate comprehensive fleet risk immediately following a configuration change and broadcast updates."""
+        logger.info("Configuration updated; triggering immediate risk recalculation...")
+        return self.recalculate(notify=True)
+
+    def _on_configuration_changed(self, new_config: Dict[str, Any]) -> None:
+        """Listener callback invoked when ConfigurationService updates."""
+        self.recalculate_on_config_change()
 
     def enrich_substations(self) -> List[Dict[str, Any]]:
         """Pre-compute criticality scores for all substations."""
@@ -188,8 +201,13 @@ class RiskService:
             self._last_state = empty_state
             return empty_state
 
-        # Execute analytical risk engine
-        raw_ranked = calculate_comprehensive_risk(assets, weather, substations)
+        # Retrieve active configuration for threshold-aware risk evaluation
+        active_config = None
+        if self.config_service is not None:
+            active_config = self.config_service.get_configuration()
+
+        # Execute analytical risk engine with active diagnostic thresholds
+        raw_ranked = calculate_comprehensive_risk(assets, weather, substations, config=active_config)
 
         raw_map = {str(a.get("asset_id")).upper(): a for a in assets}
         sub_map = {str(s.get("substation_id")).upper(): s for s in substations}
@@ -277,13 +295,22 @@ class RiskService:
             time_since_last = time.time() - self._last_directive_time
             cooldown_elapsed = (time_since_last >= cooldown_limit) or force_directive or (self._active_directive is None)
 
+            # Check if auto_draft_directives is enabled in active configuration
+            # When config_service is present, honor its setting; otherwise default to True for backwards compatibility
+            auto_draft = True
+            if self.config_service is not None:
+                auto_draft = bool(active_config.get("auto_draft_directives", False))
+
+            can_generate = force_directive or (self._active_directive is None) or auto_draft
+
             if needs_regen:
-                if cooldown_elapsed:
+                if cooldown_elapsed and can_generate:
                     ctx = build_structured_risk_context(
                         asset=top_asset,
                         weather=weather,
                         substations=substations,
-                        historical_incidents=self.historical_incidents
+                        historical_incidents=self.historical_incidents,
+                        config=active_config,
                     )
                     self._active_directive = generate_granite_directive_payload(ctx)
                     self._last_directive_time = time.time()
@@ -293,7 +320,7 @@ class RiskService:
                         f"(Score: {top_asset.get('composite_risk_score')}, Category: {top_asset.get('risk_category')})"
                     )
                 else:
-                    # Mark active directive as stale until cooldown window permits regeneration
+                    # Mark active directive as stale until cooldown window permits regeneration or auto-draft enabled
                     if self._active_directive:
                         self._active_directive["is_stale"] = True
 

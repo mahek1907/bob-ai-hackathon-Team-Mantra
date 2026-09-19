@@ -32,11 +32,24 @@ class TestDynamicDirective:
         # Set cooldown to 0 for instantaneous test transitions
         old_cooldown = os.environ.get("GRANITE_DIRECTIVE_COOLDOWN_SECONDS")
         os.environ["GRANITE_DIRECTIVE_COOLDOWN_SECONDS"] = "0"
+        try:
+            from src.services.configuration_service import get_configuration_service
+            cfg_svc = get_configuration_service()
+            old_auto = cfg_svc.get_configuration().get("auto_draft_directives", False)
+            cfg_svc.update_configuration({"auto_draft_directives": True})
+        except Exception:
+            cfg_svc = None
+            old_auto = False
+
         yield
+
         if old_cooldown is not None:
             os.environ["GRANITE_DIRECTIVE_COOLDOWN_SECONDS"] = old_cooldown
         else:
             os.environ.pop("GRANITE_DIRECTIVE_COOLDOWN_SECONDS", None)
+
+        if cfg_svc is not None:
+            cfg_svc.update_configuration({"auto_draft_directives": old_auto})
 
     @pytest.fixture
     def setup_services(self):

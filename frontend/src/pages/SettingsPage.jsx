@@ -20,7 +20,9 @@ import {
   HardDrive,
   Check,
   Info,
-  Layers
+  Layers,
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 
 export default function SettingsPage({ currentUser, onLogout }) {
@@ -31,9 +33,15 @@ export default function SettingsPage({ currentUser, onLogout }) {
   const [tempLimit, setTempLimit] = useState(105);
   const [vibrationLimit, setVibrationLimit] = useState(7.0);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+  const [configStatus, setConfigStatus] = useState('SAVED & ACTIVE');
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [healthData, setHealthData] = useState(null);
 
   useEffect(() => {
+    // 1. Fetch system health
     fetch('/api/health')
       .then(res => res.json())
       .then(data => setHealthData(data))
@@ -44,12 +52,112 @@ export default function SettingsPage({ currentUser, onLogout }) {
           model_in_use: 'Deterministic High-Fidelity Fallback',
         });
       });
+
+    // 2. Fetch authoritative workstation configuration from backend
+    fetch('/api/configuration')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.c2h2_arcing_threshold_ppm !== undefined) {
+          setArcingThreshold(Number(data.c2h2_arcing_threshold_ppm));
+        }
+        if (data.max_oil_temperature_c !== undefined) {
+          setTempLimit(Number(data.max_oil_temperature_c));
+        }
+        if (data.vibration_warning_mms !== undefined) {
+          setVibrationLimit(Number(data.vibration_warning_mms));
+        }
+        if (data.polling_interval) {
+          setPollingInterval(data.polling_interval);
+        }
+        if (data.critical_audio_alerts !== undefined) {
+          setSoundAlarms(Boolean(data.critical_audio_alerts));
+        }
+        if (data.auto_draft_directives !== undefined) {
+          setAutoModal(Boolean(data.auto_draft_directives));
+        }
+        if (data.updated_at) {
+          setLastSavedTime(data.updated_at);
+        }
+        if (data.status) {
+          setConfigStatus(data.status);
+        }
+      })
+      .catch(err => {
+        console.warn('Could not load persistent configuration from backend:', err);
+      })
+      .finally(() => {
+        setIsLoadingConfig(false);
+      });
   }, []);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const payload = {
+        c2h2_arcing_threshold_ppm: Number(arcingThreshold),
+        max_oil_temperature_c: Number(tempLimit),
+        vibration_warning_mms: Number(vibrationLimit),
+        auto_draft_directives: Boolean(autoModal),
+        polling_interval: pollingInterval,
+        critical_audio_alerts: Boolean(soundAlarms),
+      };
+
+      const res = await fetch('/api/configuration', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server error (${res.status})`);
+      }
+
+      const savedData = await res.json();
+      if (savedData.updated_at) {
+        setLastSavedTime(savedData.updated_at);
+      }
+      setConfigStatus(savedData.status || 'SAVED & ACTIVE');
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 4000);
+    } catch (err) {
+      console.error('Failed to update system configuration:', err);
+      setSaveError(err.message || 'Failed to save configuration.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleResetDefaults = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch('/api/configuration/reset', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setArcingThreshold(Number(data.c2h2_arcing_threshold_ppm || 80));
+      setTempLimit(Number(data.max_oil_temperature_c || 105));
+      setVibrationLimit(Number(data.vibration_warning_mms || 7.0));
+      setPollingInterval(data.polling_interval || '30s');
+      setSoundAlarms(Boolean(data.critical_audio_alerts ?? true));
+      setAutoModal(Boolean(data.auto_draft_directives ?? false));
+      if (data.updated_at) setLastSavedTime(data.updated_at);
+      setConfigStatus(data.status || 'SAVED & ACTIVE');
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 4000);
+    } catch (err) {
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isLiveGranite = Boolean(healthData?.watsonx_connected);
@@ -73,12 +181,19 @@ export default function SettingsPage({ currentUser, onLogout }) {
           </p>
         </div>
 
-        {isSaved && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Parameters Synced to Workstation Session</span>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono font-semibold flex items-center gap-1.5 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>● {configStatus}</span>
+          </span>
+
+          {isSaved && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Thresholds Activated & Synced to SCADA Engine</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -387,14 +502,37 @@ export default function SettingsPage({ currentUser, onLogout }) {
         </div>
 
         {/* Action Bar */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            <span>Apply & Save Configuration</span>
-          </button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <div className="text-xs text-slate-500">
+            {lastSavedTime && (
+              <span>Last deployed: <span className="font-mono text-slate-700 font-semibold">{new Date(lastSavedTime).toLocaleTimeString()}</span></span>
+            )}
+            {saveError && (
+              <span className="text-red-600 font-semibold flex items-center gap-1.5 mt-1 sm:mt-0">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{saveError}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleResetDefaults}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reset Defaults</span>
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving & Activating...' : 'Apply & Save Configuration'}</span>
+            </button>
+          </div>
         </div>
 
       </form>

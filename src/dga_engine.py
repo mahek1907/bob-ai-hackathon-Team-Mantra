@@ -163,7 +163,51 @@ def _extract_dga_readings(
 # PRIVATE HELPER FUNCTIONS: SUB-SCORE EVALUATORS
 # =============================================================================
 
-def _compute_dga_score(gases: Dict[str, Optional[float]], flags: List[str]) -> Tuple[float, Optional[str]]:
+def _extract_thresholds(config: Optional[Dict[str, Any]]) -> Tuple[float, float, float]:
+    """
+    Extract C2H2 arcing, oil temperature, and vibration warning thresholds.
+    Falls back to IEEE standard defaults if config is None or keys are missing.
+    """
+    c2h2_severe = ACETYLENE_SEVERE_PPM
+    oil_severe = OIL_TEMP_SEVERE_C
+    vib_severe = VIBRATION_SEVERE_MMS
+
+    if config is not None and isinstance(config, dict):
+        # 1. Acetylene
+        c_val = config.get("c2h2_arcing_threshold_ppm")
+        if c_val is None and isinstance(config.get("dga"), dict):
+            c_val = config["dga"].get("c2h2_arcing_threshold_ppm")
+        if c_val is not None:
+            parsed = _parse_float(c_val)
+            if parsed is not None and parsed > 0:
+                c2h2_severe = parsed
+
+        # 2. Temperature
+        t_val = config.get("max_oil_temperature_c")
+        if t_val is None and isinstance(config.get("thermal"), dict):
+            t_val = config["thermal"].get("max_oil_temperature_c")
+        if t_val is not None:
+            parsed = _parse_float(t_val)
+            if parsed is not None and parsed > 0:
+                oil_severe = parsed
+
+        # 3. Vibration
+        v_val = config.get("vibration_warning_mms")
+        if v_val is None and isinstance(config.get("mechanical"), dict):
+            v_val = config["mechanical"].get("vibration_warning_mms")
+        if v_val is not None:
+            parsed = _parse_float(v_val)
+            if parsed is not None and parsed > 0:
+                vib_severe = parsed
+
+    return c2h2_severe, oil_severe, vib_severe
+
+
+def _compute_dga_score(
+    gases: Dict[str, Optional[float]],
+    flags: List[str],
+    config: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, Optional[str]]:
     """
     Calculate deterministic DGA risk sub-score (0.0 to 60.0).
     Emphasizes Acetylene (arcing, up to 35 pts) and Ethylene (overheating, up to 15 pts),
@@ -181,15 +225,17 @@ def _compute_dga_score(gases: Dict[str, Optional[float]], flags: List[str]) -> T
     c2h4_score = 0.0
     secondary_score = 0.0
 
+    c2h2_severe_thresh, _, _ = _extract_thresholds(config)
+
     # 1. Acetylene (C2H2) -- Arcing indicator (Max 50.0 pts in DGA)
     if c2h2 is not None:
-        if c2h2 >= ACETYLENE_SEVERE_PPM:
-            fraction = min(1.0, (c2h2 - ACETYLENE_SEVERE_PPM) / 15.0)
+        if c2h2 >= c2h2_severe_thresh:
+            fraction = min(1.0, (c2h2 - c2h2_severe_thresh) / max(1.0, c2h2_severe_thresh * 0.25))
             c2h2_score = 45.0 + fraction * 5.0
             flags.append(f"High acetylene (C2H2: {c2h2:.1f} ppm) -- indicates severe electrical arcing risk")
             detected_fault = FAULT_ARCING
         elif c2h2 >= ACETYLENE_ELEVATED_PPM:
-            fraction = (c2h2 - ACETYLENE_ELEVATED_PPM) / (ACETYLENE_SEVERE_PPM - ACETYLENE_ELEVATED_PPM)
+            fraction = (c2h2 - ACETYLENE_ELEVATED_PPM) / max(0.1, (c2h2_severe_thresh - ACETYLENE_ELEVATED_PPM))
             c2h2_score = 15.0 + fraction * 30.0
             flags.append(f"Elevated acetylene (C2H2: {c2h2:.1f} ppm) -- suggests possible electrical arcing")
             detected_fault = FAULT_ARCING
@@ -237,7 +283,11 @@ def _compute_dga_score(gases: Dict[str, Optional[float]], flags: List[str]) -> T
     return total_dga, detected_fault
 
 
-def _compute_oil_temp_score(temp_c: Optional[float], flags: List[str]) -> Tuple[float, bool]:
+def _compute_oil_temp_score(
+    temp_c: Optional[float],
+    flags: List[str],
+    config: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, bool]:
     """
     Calculate deterministic oil temperature sub-score (0.0 to 25.0).
     Continuous interpolation across nominal, elevated, and severe thresholds.
@@ -250,25 +300,32 @@ def _compute_oil_temp_score(temp_c: Optional[float], flags: List[str]) -> Tuple[
         flags.append(f"Oil temperature ({temp_c:.1f} C) is outside plausible physical range")
         return 0.0, False
 
+    _, oil_temp_severe_thresh, _ = _extract_thresholds(config)
+
     if temp_c <= OIL_TEMP_NORMAL_MAX_C:
         return 0.0, False
     elif temp_c <= OIL_TEMP_ELEVATED_C:
         # Smooth warming between 75 C and 85 C (0.0 to 6.0 pts)
         fraction = (temp_c - OIL_TEMP_NORMAL_MAX_C) / (OIL_TEMP_ELEVATED_C - OIL_TEMP_NORMAL_MAX_C)
         return fraction * 6.0, False
-    elif temp_c <= OIL_TEMP_SEVERE_C:
-        # Elevated thermal stress between 85 C and 105 C (6.0 to 20.0 pts)
-        fraction = (temp_c - OIL_TEMP_ELEVATED_C) / (OIL_TEMP_SEVERE_C - OIL_TEMP_ELEVATED_C)
+    elif temp_c <= oil_temp_severe_thresh:
+        # Elevated thermal stress between 85 C and severe threshold (6.0 to 20.0 pts)
+        span = max(1.0, oil_temp_severe_thresh - OIL_TEMP_ELEVATED_C)
+        fraction = (temp_c - OIL_TEMP_ELEVATED_C) / span
         flags.append(f"Elevated oil temperature ({temp_c:.1f} C) -- suggests thermal loading stress")
         return 6.0 + fraction * 14.0, True
     else:
-        # Severe overheating > 105 C (20.0 to 25.0 pts max)
-        fraction = min(1.0, (temp_c - OIL_TEMP_SEVERE_C) / 20.0)
+        # Severe overheating > oil_temp_severe_thresh (20.0 to 25.0 pts max)
+        fraction = min(1.0, (temp_c - oil_temp_severe_thresh) / 20.0)
         flags.append(f"High oil temperature ({temp_c:.1f} C) -- indicates critical overheating stress")
         return 20.0 + fraction * 5.0, True
 
 
-def _compute_vibration_score(vib_mms: Optional[float], flags: List[str]) -> Tuple[float, bool]:
+def _compute_vibration_score(
+    vib_mms: Optional[float],
+    flags: List[str],
+    config: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, bool]:
     """
     Calculate deterministic vibration sub-score (0.0 to 15.0).
     Continuous interpolation across nominal, elevated, and severe thresholds.
@@ -281,20 +338,23 @@ def _compute_vibration_score(vib_mms: Optional[float], flags: List[str]) -> Tupl
         flags.append(f"Vibration level ({vib_mms:.1f} mm/s) is outside plausible physical range")
         return 0.0, False
 
+    _, _, vib_severe_thresh = _extract_thresholds(config)
+
     if vib_mms <= VIBRATION_NORMAL_MAX_MMS:
         return 0.0, False
     elif vib_mms <= VIBRATION_ELEVATED_MMS:
         # Moderate vibration between 2.5 and 3.5 mm/s (0.0 to 4.0 pts)
         fraction = (vib_mms - VIBRATION_NORMAL_MAX_MMS) / (VIBRATION_ELEVATED_MMS - VIBRATION_NORMAL_MAX_MMS)
         return fraction * 4.0, False
-    elif vib_mms <= VIBRATION_SEVERE_MMS:
-        # Elevated vibration between 3.5 and 5.5 mm/s (4.0 to 11.0 pts)
-        fraction = (vib_mms - VIBRATION_ELEVATED_MMS) / (VIBRATION_SEVERE_MMS - VIBRATION_ELEVATED_MMS)
+    elif vib_mms <= vib_severe_thresh:
+        # Elevated vibration between 3.5 and severe threshold (4.0 to 11.0 pts)
+        span = max(0.5, vib_severe_thresh - VIBRATION_ELEVATED_MMS)
+        fraction = (vib_mms - VIBRATION_ELEVATED_MMS) / span
         flags.append(f"Elevated vibration ({vib_mms:.2f} mm/s) -- suggests mechanical/core stress")
         return 4.0 + fraction * 7.0, True
     else:
-        # Severe vibration > 5.5 mm/s (11.0 to 15.0 pts max)
-        fraction = min(1.0, (vib_mms - VIBRATION_SEVERE_MMS) / 2.0)
+        # Severe vibration > vib_severe_thresh (11.0 to 15.0 pts max)
+        fraction = min(1.0, (vib_mms - vib_severe_thresh) / 2.0)
         flags.append(f"High vibration ({vib_mms:.2f} mm/s) -- indicates significant mechanical stress")
         return 11.0 + fraction * 4.0, True
 
@@ -303,7 +363,7 @@ def _compute_vibration_score(vib_mms: Optional[float], flags: List[str]) -> Tupl
 # PUBLIC INTERFACE
 # =============================================================================
 
-def evaluate_dga_and_health(asset: dict) -> dict:
+def evaluate_dga_and_health(asset: dict, config: Optional[Dict[str, Any]] = None) -> dict:
     """
     Evaluate transformer physical health and DGA condition deterministically.
 
@@ -317,6 +377,10 @@ def evaluate_dga_and_health(asset: dict) -> dict:
             - vibration_level (float, mm/s)
             - electrical_load_pct (float, optional)
             - previous_fault_history (int, optional)
+        config (dict, optional): Workstation threshold overrides:
+            - c2h2_arcing_threshold_ppm (float)
+            - max_oil_temperature_c (float)
+            - vibration_warning_mms (float)
 
     Returns:
         dict: Standardized diagnostic result:
@@ -410,9 +474,9 @@ def evaluate_dga_and_health(asset: dict) -> dict:
         sensor_quality = QUALITY_INVALID
 
     # 5. Compute sub-scores
-    dga_subscore, dga_fault = _compute_dga_score(gases, fault_flags)
-    temp_subscore, is_temp_fault = _compute_oil_temp_score(temp_val, fault_flags)
-    vib_subscore, is_vib_fault = _compute_vibration_score(vib_val, fault_flags)
+    dga_subscore, dga_fault = _compute_dga_score(gases, fault_flags, config=config)
+    temp_subscore, is_temp_fault = _compute_oil_temp_score(temp_val, fault_flags, config=config)
+    vib_subscore, is_vib_fault = _compute_vibration_score(vib_val, fault_flags, config=config)
 
     # Uncertainty penalty for missing data (ensures unmonitored units do not score 0)
     data_quality_penalty = 0.0

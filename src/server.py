@@ -61,6 +61,7 @@ try:
     from .services.telemetry_service import TelemetryService
     from .services.risk_service import RiskService
     from .services.mqtt_service import MqttService
+    from .services.configuration_service import get_configuration_service, ConfigurationService
 except ImportError:
     from risk_engine import calculate_comprehensive_risk  # type: ignore
     from dga_engine import evaluate_dga_and_health  # type: ignore
@@ -72,6 +73,7 @@ except ImportError:
     from services.telemetry_service import TelemetryService  # type: ignore
     from services.risk_service import RiskService  # type: ignore
     from services.mqtt_service import MqttService  # type: ignore
+    from services.configuration_service import get_configuration_service, ConfigurationService  # type: ignore
 
 
 
@@ -155,12 +157,14 @@ def get_enriched_substations() -> List[Dict[str, Any]]:
 # SINGLETON REAL-TIME SERVICES & WEBSOCKET BROADCASTER
 # =============================================================================
 
+configuration_service = get_configuration_service()
 weather_service = WeatherService(fallback_path=WEATHER_DATA_PATH)
 telemetry_service = TelemetryService(baseline_path=TRANSFORMER_DATA_PATH)
 risk_service = RiskService(
     telemetry_service=telemetry_service,
     weather_service=weather_service,
-    substations=get_raw_substations()
+    substations=get_raw_substations(),
+    config_service=configuration_service,
 )
 
 
@@ -210,6 +214,22 @@ def _on_mqtt_telemetry(payload: Dict[str, Any]) -> None:
             }
             asyncio.run_coroutine_threadsafe(ws_manager.broadcast(directive_event), main_event_loop)
 
+
+def _on_configuration_updated(updated_config: Dict[str, Any]) -> None:
+    """Invoked when workstation configuration is updated or reset."""
+    if main_event_loop and not main_event_loop.is_closed():
+        config_event = {
+            "type": "configuration_updated",
+            "timestamp": updated_config.get("updated_at", datetime.now(timezone.utc).isoformat()),
+            "configuration": updated_config,
+        }
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(config_event), main_event_loop)
+        # Recalculate and broadcast fleet risk with updated thresholds
+        new_state = risk_service.recalculate(notify=False)
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(new_state), main_event_loop)
+
+
+configuration_service.register_listener(_on_configuration_updated)
 
 mqtt_service = MqttService(on_telemetry_received=_on_mqtt_telemetry)
 
@@ -958,7 +978,8 @@ def get_asset_detail(asset_id: str) -> Dict[str, Any]:
 
     raw_asset = telemetry_service.get_asset(asset_id) or target
     target_copy = dict(target)
-    target_copy["dga_evaluation"] = evaluate_dga_and_health(raw_asset)
+    cfg = configuration_service.get_configuration() if configuration_service else None
+    target_copy["dga_evaluation"] = evaluate_dga_and_health(raw_asset, config=cfg)
     return target_copy
 
 
@@ -1004,6 +1025,66 @@ def countersign_work_order(req: CountersignRequest) -> Dict[str, Any]:
         "dispatch_id": f"DSP-{req.asset_id}-{int(datetime.now().timestamp())}",
         "message": "Crew pre-positioning work order successfully countersigned and queued for field dispatch.",
     }
+
+
+# =============================================================================
+# CONTROL CENTER CONFIGURATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/configuration", tags=["Configuration"])
+def get_system_configuration() -> Dict[str, Any]:
+    """
+    Retrieve active workstation diagnostic thresholds, telemetry polling rates,
+    and automated IBM Granite work-order drafting preferences.
+    """
+    return configuration_service.get_configuration()
+
+
+@app.put("/api/configuration", tags=["Configuration"])
+@app.post("/api/configuration", tags=["Configuration"])
+def update_system_configuration(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Update, validate, and persist workstation diagnostic thresholds and preferences.
+    Immediately activates new thresholds across DGA and fleet risk engines without server restart.
+    """
+    try:
+        saved = configuration_service.update_configuration(payload)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    # Immediately recalculate fleet risk using the updated active configuration
+    new_state = risk_service.recalculate(notify=False)
+
+    # Broadcast updated configuration and recalculated risk state across active WebSocket subscribers
+    if main_event_loop and not main_event_loop.is_closed():
+        config_event = {
+            "type": "configuration_updated",
+            "timestamp": saved.get("updated_at", datetime.now(timezone.utc).isoformat()),
+            "configuration": saved,
+        }
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(config_event), main_event_loop)
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(new_state), main_event_loop)
+
+    return saved
+
+
+@app.post("/api/configuration/reset", tags=["Configuration"])
+def reset_system_configuration() -> Dict[str, Any]:
+    """Reset workstation diagnostic thresholds and preferences to factory defaults."""
+    res = configuration_service.reset_to_defaults()
+    new_state = risk_service.recalculate(notify=False)
+    if main_event_loop and not main_event_loop.is_closed():
+        config_event = {
+            "type": "configuration_updated",
+            "timestamp": res.get("updated_at", datetime.now(timezone.utc).isoformat()),
+            "configuration": res,
+        }
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(config_event), main_event_loop)
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(new_state), main_event_loop)
+    return res
 
 
 if __name__ == "__main__":

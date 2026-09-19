@@ -252,6 +252,7 @@ def calculate_comprehensive_risk(
     assets: list,
     weather: dict,
     substations: list,
+    config: Optional[Dict[str, Any]] = None,
 ) -> list:
     """
     Calculate comprehensive outage risk and produce a ranked failure-advisory list.
@@ -265,6 +266,7 @@ def calculate_comprehensive_risk(
         assets (list): Collection of transformer asset telemetry dictionaries.
         weather (dict): Meteorological telemetry (single dict or substation-keyed collection).
         substations (list): Substation operational records with pre-computed criticality.
+        config (dict, optional): Workstation diagnostic threshold overrides.
 
     Returns:
         list: Ranked list of risk dictionaries sorted descending by composite_risk_score,
@@ -277,7 +279,7 @@ def calculate_comprehensive_risk(
 
     for raw_asset in assets:
         # 1. Evaluate Physical DGA & Equipment Health
-        dga_res = evaluate_dga_and_health(raw_asset)
+        dga_res = evaluate_dga_and_health(raw_asset, config=config)
 
         asset_id = dga_res["asset_id"]
         substation_id = dga_res["substation_id"] or "UNKNOWN_SUBSTATION"

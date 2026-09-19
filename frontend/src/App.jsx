@@ -188,6 +188,12 @@ export default function App() {
               return;
             }
 
+            // 1b. Configuration update event
+            if (data.type === 'configuration_updated') {
+              console.log('[GridSentinel WebSocket] System configuration updated:', data.configuration);
+              return;
+            }
+
             // 2. Full fleet risk state update
             if (data && data.ranked_assets && data.ranked_assets.length > 0) {
               setAssets(data.ranked_assets);

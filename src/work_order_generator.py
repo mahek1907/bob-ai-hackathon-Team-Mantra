@@ -62,7 +62,8 @@ def build_structured_risk_context(
     asset: Dict[str, Any],
     weather: Optional[Dict[str, Any]] = None,
     substations: Optional[List[Dict[str, Any]]] = None,
-    historical_incidents: Optional[List[Dict[str, Any]]] = None
+    historical_incidents: Optional[List[Dict[str, Any]]] = None,
+    config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Assemble the complete structured risk context object for a transformer asset.
@@ -233,6 +234,7 @@ def build_structured_risk_context(
         "grid_criticality": grid_criticality,
         "historical_incidents": historical_ctx,
         "risk_factors": fault_flags if isinstance(fault_flags, list) else [str(fault_flags)],
+        "config": config or {},
     }
 
 
@@ -260,16 +262,21 @@ def _build_action_recommendations(ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
     w_mult = weather.get("weather_risk_multiplier", 1.0)
     event_name = weather.get("event_name", "Atmospheric Front")
 
+    cfg = ctx.get("config", {}) or {}
+    c2h2_threshold = float(cfg.get("c2h2_arcing_threshold_ppm") or 80.0)
+    oil_temp_threshold = float(cfg.get("max_oil_temperature_c") or 105.0)
+    vib_threshold = float(cfg.get("vibration_warning_mms") or 7.0)
+
     actions: List[Dict[str, Any]] = []
 
     # High severity / Critical conditions (Score >= 80 or CRITICAL)
     if risk_score >= 80.0 or risk_level == "CRITICAL":
-        if c2h2 >= 35.0:
+        if c2h2 >= c2h2_threshold or (c2h2 >= 35.0 and c2h2_threshold >= 80.0):
             actions.append({
                 "step": 1,
                 "title": "IMMEDIATE ELECTRICAL ARCING SUPPRESSION",
                 "description": (
-                    f"Acetylene concentration is at {c2h2:.1f} ppm (critical threshold exceeded). "
+                    f"Acetylene concentration is at {c2h2:.1f} ppm (threshold {c2h2_threshold:.1f} ppm exceeded). "
                     f"Dispatch High-Voltage Rapid Response Crew #3 to {location} within 30 minutes. "
                     f"Prepare mobile degasification trailer and acoustic partial-discharge ultrasonic analyzer on-site."
                 ),
@@ -286,13 +293,13 @@ def _build_action_recommendations(ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "urgency": "CRITICAL",
                 "type": "load",
             })
-        elif oil_temp >= 105.0 or c2h4 >= 150.0 or load_pct >= 90.0:
+        elif oil_temp >= oil_temp_threshold or c2h4 >= 150.0 or load_pct >= 90.0:
             actions.append({
                 "step": 1,
                 "title": "EMERGENCY THERMAL RUNAWAY INTERVENTION",
                 "description": (
                     f"Top-oil temperature is severely elevated at {oil_temp:.1f}°C under {load_pct:.1f}% electrical loading "
-                    f"(ethylene: {c2h4:.1f} ppm). Force-activate all auxiliary radiator forced-air fan banks."
+                    f"(thermal limit {oil_temp_threshold:.1f}°C exceeded, ethylene: {c2h4:.1f} ppm). Force-activate all auxiliary radiator forced-air fan banks."
                 ),
                 "urgency": "CRITICAL",
                 "type": "thermal",
@@ -303,6 +310,26 @@ def _build_action_recommendations(ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "description": (
                     f"Transfer {round(load_pct * 0.35, 1)}% of electrical load to parallel distribution transformers. "
                     f"Deploy field crew with calibrated FLIR thermal camera to inspect 345kV bushings and tap-changer headers for localized hotspots."
+                ),
+                "urgency": "HIGH",
+                "type": "load",
+            })
+        elif vibration >= vib_threshold:
+            actions.append({
+                "step": 1,
+                "title": "CRITICAL MECHANICAL VIBRATION INTERVENTION",
+                "description": (
+                    f"Mechanical core vibration is at {vibration:.2f} mm/s (threshold {vib_threshold:.1f} mm/s exceeded). "
+                    f"Dispatch mechanical field engineers to {location} for structural clamping bolt and bushing inspection."
+                ),
+                "urgency": "CRITICAL",
+                "type": "mechanical",
+            })
+            actions.append({
+                "step": 2,
+                "title": "VIBRATION LOAD REDUCTION",
+                "description": (
+                    f"Throttle transformer load to reduce core mechanical stress forces until inspection completes."
                 ),
                 "urgency": "HIGH",
                 "type": "load",
