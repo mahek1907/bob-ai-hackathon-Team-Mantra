@@ -145,6 +145,7 @@ export default function App() {
   const [selectedAsset, setSelectedAsset] = useState(INITIAL_ASSETS[0]);
   const [userPinnedAsset, setUserPinnedAsset] = useState(false);
   const [workOrderDirective, setWorkOrderDirective] = useState('');
+  const [structuredDirective, setStructuredDirective] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLiveGranite, setIsLiveGranite] = useState(false);
@@ -181,6 +182,7 @@ export default function App() {
             if (data.type === 'directive_updated' && data.directive) {
               const dir = data.directive;
               setWorkOrderDirective(dir.directive_text || dir.work_order_directive || '');
+              setStructuredDirective(dir.structured_directive || null);
               setIsLiveGranite(Boolean(dir.is_live_granite));
               setEngineName(dir.engine || (dir.is_live_granite ? 'IBM Granite 3.0 — Live' : 'IBM Granite 3.0 — Template Fallback'));
               return;
@@ -211,6 +213,7 @@ export default function App() {
               if (data.active_directive) {
                 const dir = data.active_directive;
                 setWorkOrderDirective(dir.directive_text || dir.work_order_directive || '');
+                setStructuredDirective(dir.structured_directive || null);
                 setIsLiveGranite(Boolean(dir.is_live_granite));
                 setEngineName(dir.engine || (dir.is_live_granite ? 'IBM Granite 3.0 — Live' : 'IBM Granite 3.0 — Template Fallback'));
               }
@@ -388,6 +391,7 @@ export default function App() {
     }
     setIsGenerating(true);
     setWorkOrderDirective('');
+    setStructuredDirective(null);
 
     recordEvent(
       EVENT_TYPES.WORK_ORDER_GEN,
@@ -406,6 +410,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setWorkOrderDirective(data.work_order_directive || data.directive_text);
+        setStructuredDirective(data.structured_directive || null);
         setIsLiveGranite(data.is_live_granite);
         setEngineName(data.engine);
       } else {
@@ -590,6 +595,8 @@ ${interventionText}
               onGenerateWorkOrder={(a) => handleGenerateWorkOrder(a, false)}
               isGenerating={isGenerating}
               directive={workOrderDirective}
+              structuredDirective={structuredDirective}
+              weather={weather}
               selectedAsset={selectedAsset}
               setSelectedAsset={setSelectedAsset}
               isLiveGranite={isLiveGranite}
@@ -617,6 +624,8 @@ ${interventionText}
         onClose={() => setIsModalOpen(false)}
         asset={selectedAsset}
         directive={workOrderDirective}
+        structuredDirective={structuredDirective}
+        weather={weather}
         isLoading={isGenerating}
         isLiveGranite={isLiveGranite}
         engineName={engineName}

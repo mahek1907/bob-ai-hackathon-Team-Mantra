@@ -236,11 +236,10 @@ def build_structured_risk_context(
     }
 
 
-def _formulate_dynamic_intervention(ctx: Dict[str, Any]) -> str:
+def _build_action_recommendations(ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Formulate dynamic, context-specific operational intervention text based on
-    current physical telemetry, DGA gas levels, weather hazards, and risk priority.
-    Never returns a hardcoded or static string.
+    Build structured, numbered action recommendations based on current physical telemetry,
+    DGA gas levels, weather hazards, and risk priority.
     """
     risk_score = float(ctx.get("risk_score", 0.0))
     risk_level = str(ctx.get("risk_level", "NORMAL")).upper()
@@ -261,85 +260,183 @@ def _formulate_dynamic_intervention(ctx: Dict[str, Any]) -> str:
     w_mult = weather.get("weather_risk_multiplier", 1.0)
     event_name = weather.get("event_name", "Atmospheric Front")
 
+    actions: List[Dict[str, Any]] = []
+
     # High severity / Critical conditions (Score >= 80 or CRITICAL)
     if risk_score >= 80.0 or risk_level == "CRITICAL":
-        interventions = []
-
-        # Arcing vs Thermal vs Mechanical
         if c2h2 >= 35.0:
-            interventions.append(
-                f"1. IMMEDIATE ELECTRICAL ARCING SUPPRESSION: Acetylene concentration is at {c2h2:.1f} ppm "
-                f"(critical threshold exceeded). Dispatch High-Voltage Rapid Response Crew #3 to {location} within 30 minutes. "
-                f"Prepare mobile degasification trailer and acoustic partial-discharge ultrasonic analyzer on-site."
-            )
-            interventions.append(
-                f"2. EMERGENCY LOAD OFFLOADING: Execute SCADA contingency tie-line switching immediately to offload {transformer_id} "
-                f"by at least 40% (current load: {load_pct:.1f}%), diverting bulk power across adjacent substation feeds to arrest arcing progression."
-            )
+            actions.append({
+                "step": 1,
+                "title": "IMMEDIATE ELECTRICAL ARCING SUPPRESSION",
+                "description": (
+                    f"Acetylene concentration is at {c2h2:.1f} ppm (critical threshold exceeded). "
+                    f"Dispatch High-Voltage Rapid Response Crew #3 to {location} within 30 minutes. "
+                    f"Prepare mobile degasification trailer and acoustic partial-discharge ultrasonic analyzer on-site."
+                ),
+                "urgency": "CRITICAL",
+                "type": "arcing",
+            })
+            actions.append({
+                "step": 2,
+                "title": "EMERGENCY LOAD OFFLOADING",
+                "description": (
+                    f"Execute SCADA contingency tie-line switching immediately to offload {transformer_id} "
+                    f"by at least 40% (current load: {load_pct:.1f}%), diverting bulk power across adjacent substation feeds to arrest arcing progression."
+                ),
+                "urgency": "CRITICAL",
+                "type": "load",
+            })
         elif oil_temp >= 105.0 or c2h4 >= 150.0 or load_pct >= 90.0:
-            interventions.append(
-                f"1. EMERGENCY THERMAL RUNAWAY INTERVENTION: Top-oil temperature is severely elevated at {oil_temp:.1f}°C "
-                f"under {load_pct:.1f}% electrical loading (ethylene: {c2h4:.1f} ppm). Force-activate all auxiliary radiator forced-air fan banks."
-            )
-            interventions.append(
-                f"2. SCADA LOAD REDISTRIBUTION: Transfer {round(load_pct * 0.35, 1)}% of electrical load to parallel distribution transformers. "
-                f"Deploy field crew with calibrated FLIR thermal camera to inspect 345kV bushings and tap-changer headers for localized hotspots."
-            )
+            actions.append({
+                "step": 1,
+                "title": "EMERGENCY THERMAL RUNAWAY INTERVENTION",
+                "description": (
+                    f"Top-oil temperature is severely elevated at {oil_temp:.1f}°C under {load_pct:.1f}% electrical loading "
+                    f"(ethylene: {c2h4:.1f} ppm). Force-activate all auxiliary radiator forced-air fan banks."
+                ),
+                "urgency": "CRITICAL",
+                "type": "thermal",
+            })
+            actions.append({
+                "step": 2,
+                "title": "SCADA LOAD REDISTRIBUTION",
+                "description": (
+                    f"Transfer {round(load_pct * 0.35, 1)}% of electrical load to parallel distribution transformers. "
+                    f"Deploy field crew with calibrated FLIR thermal camera to inspect 345kV bushings and tap-changer headers for localized hotspots."
+                ),
+                "urgency": "HIGH",
+                "type": "load",
+            })
         else:
-            interventions.append(
-                f"1. CRITICAL ASSET ISOLATION ASSESSMENT: Composite equipment health priority has reached {risk_score:.1f}/100. "
-                f"Deploy rapid-response substation crew to {location} to conduct diagnostic screening, vibration analysis "
-                f"({vibration:.2f} mm/s), and continuous dissolved gas monitoring."
-            )
+            actions.append({
+                "step": 1,
+                "title": "CRITICAL ASSET ISOLATION ASSESSMENT",
+                "description": (
+                    f"Composite equipment health priority has reached {risk_score:.1f}/100. "
+                    f"Deploy rapid-response substation crew to {location} to conduct diagnostic screening, vibration analysis "
+                    f"({vibration:.2f} mm/s), and continuous dissolved gas monitoring."
+                ),
+                "urgency": "CRITICAL",
+                "type": "inspection",
+            })
 
         # Weather compounding clause
         if w_mult >= 1.3 or w_gust >= 60.0 or "storm" in event_name.lower():
-            interventions.append(
-                f"3. ADVERSE WEATHER PRE-POSITIONING: Severe ambient weather ({event_name}, {w_gust:.0f} km/h wind gusts, {w_temp:.1f}°C) "
-                f"compounds failure risk by {w_mult:.2f}x. Pre-position emergency mobile substation unit and backup generator trailer "
-                f"at regional depot near {location} prior to peak weather impact."
-            )
+            actions.append({
+                "step": len(actions) + 1,
+                "title": "ADVERSE WEATHER PRE-POSITIONING",
+                "description": (
+                    f"Severe ambient weather ({event_name}, {w_gust:.0f} km/h wind gusts, {w_temp:.1f}°C) "
+                    f"compounds failure risk by {w_mult:.2f}x. Pre-position emergency mobile substation unit and backup generator trailer "
+                    f"at regional depot near {location} prior to peak weather impact."
+                ),
+                "urgency": "HIGH",
+                "type": "weather",
+            })
         else:
-            interventions.append(
-                f"3. STAGING & ISOLATION READINESS: Establish 25-meter perimeter exclusion zone around {transformer_id}. "
-                f"Hold emergency replacement 345kV bushing set and radiator fan relay on hot standby."
-            )
-
-        return "\n\n".join(interventions)
+            actions.append({
+                "step": len(actions) + 1,
+                "title": "STAGING & ISOLATION READINESS",
+                "description": (
+                    f"Establish 25-meter perimeter exclusion zone around {transformer_id}. "
+                    f"Hold emergency replacement 345kV bushing set and radiator fan relay on hot standby."
+                ),
+                "urgency": "HIGH",
+                "type": "staging",
+            })
 
     # Elevated / High conditions (Score 60-79 or HIGH)
     elif risk_score >= 60.0 or risk_level == "HIGH":
-        interventions = [
-            f"1. PRIORITY FIELD INSPECTION: Calculated risk priority is {risk_score:.1f}/100 ({risk_level}). "
-            f"Schedule on-site technical inspection of {transformer_id} at {location} within 4 to 6 hours. "
-            f"Extract manual oil sample for confirmatory laboratory gas chromatography (current DGA: C2H2={c2h2:.1f} ppm, C2H4={c2h4:.1f} ppm, H2={h2:.1f} ppm).",
-            f"2. OPERATIONAL STABILIZATION: Inspect conservator silica gel breather, oil level gauges, and radiator fan relay operation. "
-            f"Review auxiliary tie-line capacity in case load curtailment is required if ambient temperatures exceed {w_temp + 5:.1f}°C."
-        ]
+        actions.append({
+            "step": 1,
+            "title": "PRIORITY FIELD INSPECTION",
+            "description": (
+                f"Calculated risk priority is {risk_score:.1f}/100 ({risk_level}). "
+                f"Schedule on-site technical inspection of {transformer_id} at {location} within 4 to 6 hours. "
+                f"Extract manual oil sample for confirmatory laboratory gas chromatography (current DGA: C2H2={c2h2:.1f} ppm, C2H4={c2h4:.1f} ppm, H2={h2:.1f} ppm)."
+            ),
+            "urgency": "HIGH",
+            "type": "inspection",
+        })
+        actions.append({
+            "step": 2,
+            "title": "OPERATIONAL STABILIZATION",
+            "description": (
+                f"Inspect conservator silica gel breather, oil level gauges, and radiator fan relay operation. "
+                f"Review auxiliary tie-line capacity in case load curtailment is required if ambient temperatures exceed {w_temp + 5:.1f}°C."
+            ),
+            "urgency": "MEDIUM",
+            "type": "maintenance",
+        })
         if w_mult >= 1.2:
-            interventions.append(
-                f"3. WEATHER STAGING: Given elevated atmospheric stress ({w_mult:.2f}x multiplier), place substation crew on active standby "
-                f"at {location} for rapid switching deployment."
-            )
-        return "\n\n".join(interventions)
+            actions.append({
+                "step": 3,
+                "title": "WEATHER STAGING",
+                "description": (
+                    f"Given elevated atmospheric stress ({w_mult:.2f}x multiplier), place substation crew on active standby "
+                    f"at {location} for rapid switching deployment."
+                ),
+                "urgency": "MEDIUM",
+                "type": "weather",
+            })
 
     # Moderate conditions (Score 40-59 or MEDIUM)
     elif risk_score >= 40.0 or risk_level == "MEDIUM":
-        return (
-            f"1. PREVENTIVE OPERATIONAL MONITORING: Current risk is moderate ({risk_score:.1f}/100). "
-            f"Maintain standard SCADA polling and observe DGA gas accumulation trends for {transformer_id} over the next 24-48 hours.\n\n"
-            f"2. ROUTINE VERIFICATION: Conduct scheduled visual inspection of radiator fins and inspect for minor oil seepage or vibration anomalies "
-            f"(current vibration: {vibration:.2f} mm/s). No emergency load curtailment or crew pre-positioning required at current telemetry levels."
-        )
+        actions.append({
+            "step": 1,
+            "title": "PREVENTIVE OPERATIONAL MONITORING",
+            "description": (
+                f"Current risk is moderate ({risk_score:.1f}/100). "
+                f"Maintain standard SCADA polling and observe DGA gas accumulation trends for {transformer_id} over the next 24-48 hours."
+            ),
+            "urgency": "STANDARD",
+            "type": "monitoring",
+        })
+        actions.append({
+            "step": 2,
+            "title": "ROUTINE VERIFICATION",
+            "description": (
+                f"Conduct scheduled visual inspection of radiator fins and inspect for minor oil seepage or vibration anomalies "
+                f"(current vibration: {vibration:.2f} mm/s). No emergency load curtailment or crew pre-positioning required at current telemetry levels."
+            ),
+            "urgency": "STANDARD",
+            "type": "maintenance",
+        })
 
     # Low / Normal conditions (Score < 40 or LOW)
     else:
-        return (
-            f"1. NOMINAL GRID SUPERVISION: {transformer_id} is operating safely within standard IEEE physical and thermal limits "
-            f"(Risk Score: {risk_score:.1f}/100, Level: {risk_level}, Oil Temp: {oil_temp:.1f}°C, Load: {load_pct:.1f}%).\n\n"
-            f"2. STANDARD MAINTENANCE CYCLE: No emergency intervention, de-energization, or crew pre-positioning required. "
-            f"Maintain regular automated telemetry polling and standard quarterly inspection interval."
-        )
+        actions.append({
+            "step": 1,
+            "title": "NOMINAL GRID SUPERVISION",
+            "description": (
+                f"{transformer_id} is operating safely within standard IEEE physical and thermal limits "
+                f"(Risk Score: {risk_score:.1f}/100, Level: {risk_level}, Oil Temp: {oil_temp:.1f}°C, Load: {load_pct:.1f}%)."
+            ),
+            "urgency": "ROUTINE",
+            "type": "supervision",
+        })
+        actions.append({
+            "step": 2,
+            "title": "STANDARD MAINTENANCE CYCLE",
+            "description": (
+                "No emergency intervention, de-energization, or crew pre-positioning required. "
+                "Maintain regular automated telemetry polling and standard quarterly inspection interval."
+            ),
+            "urgency": "ROUTINE",
+            "type": "maintenance",
+        })
+
+    return actions
+
+
+def _formulate_dynamic_intervention(ctx: Dict[str, Any]) -> str:
+    """
+    Formulate dynamic, context-specific operational intervention text based on
+    current physical telemetry, DGA gas levels, weather hazards, and risk priority.
+    Never returns a hardcoded or static string.
+    """
+    actions = _build_action_recommendations(ctx)
+    return "\n\n".join(f"{a['step']}. {a['title']}: {a['description']}" for a in actions)
 
 
 def _build_prompt(ctx: Dict[str, Any]) -> str:
@@ -496,6 +593,142 @@ def _fallback_work_order(ctx: Dict[str, Any]) -> str:
 """
 
 
+def build_structured_directive_object(
+    ctx: Dict[str, Any],
+    is_live_granite: bool = False
+) -> Dict[str, Any]:
+    """
+    Build a clean, strongly-typed structured directive object for the Grid Operations
+    Console Action Card UI. Eliminates raw Markdown formatting while preserving all
+    diagnostic metrics, live numbers, and human sign-off mandates.
+    """
+    telem = ctx.get("telemetry", {})
+    weather = ctx.get("weather", {})
+    crit = ctx.get("grid_criticality", {})
+    dga = ctx.get("dga_diagnosis", {})
+    history = ctx.get("historical_incidents", {})
+
+    transformer_id = ctx.get("transformer_id", "TX-401")
+    model = ctx.get("model", "High-Voltage Power Transformer")
+    location = ctx.get("location", "Metro Central Transit Substation")
+    risk_score = float(ctx.get("risk_score", 0.0))
+    risk_level = str(ctx.get("risk_level", "NORMAL")).upper()
+
+    oil_temp = float(telem.get("oil_temperature", 75.0))
+    vibration = float(telem.get("vibration", 2.5))
+    load_pct = float(telem.get("load_percent", 65.0))
+    c2h2 = float(telem.get("c2h2_ppm", 0.0))
+    c2h4 = float(telem.get("c2h4_ppm", 0.0))
+    h2 = float(telem.get("hydrogen_ppm", 0.0))
+    ch4 = float(telem.get("ch4_ppm", 0.0))
+
+    w_temp = float(weather.get("temperature", 25.0))
+    w_gust = float(weather.get("wind_gust", 15.0))
+    w_mult = float(weather.get("weather_risk_multiplier", 1.0))
+    w_source = str(weather.get("source", "Open-Meteo Live"))
+    event_name = str(weather.get("event_name", "Atmospheric Weather"))
+
+    customers = int(crit.get("customers_affected", 0))
+    infra = crit.get("critical_infrastructure", ["Standard Residential Grid"])
+    if not isinstance(infra, list):
+        infra = [str(infra)]
+    incident_count = int(history.get("recent_incident_count", 0))
+
+    recommendations = _build_action_recommendations(ctx)
+
+    if risk_score >= 80.0 or risk_level == "CRITICAL":
+        crew_line = f"Rapid Response High-Voltage Substation Crew #3 (4 certified technicians) dispatched to {location}."
+        prepos_line = f"Pre-position high-voltage emergency response unit at substation access bay near {location}."
+        equipment_line = "Mobile degasification trailer, acoustic partial-discharge ultrasonic analyzer, FLIR T1020 HD infrared camera."
+        spares_line = "Replacement 345kV bushing assembly, radiator cooling fan relay bank, spare silica gel breathers."
+        urgency_line = f"Calculated risk priority is {risk_score:.1f}/100 with imminent dielectric or thermal failure probability."
+        safety_line = "Maintain 25-meter arc-flash perimeter exclusion zone; verify remote SCADA trip coil interlocks prior to personnel entry."
+    elif risk_score >= 60.0 or risk_level == "HIGH":
+        crew_line = f"Substation Electrical Maintenance Crew #2 (2 technicians) scheduled for priority field inspection."
+        prepos_line = f"Place field service crew on active standby at regional operations base near {location}."
+        equipment_line = "Portable gas chromatograph, calibrated infrared pyrometer, oil dielectric breakdown tester."
+        spares_line = "Radiator fan relay, conservator diaphragm kit, backup temperature sensor probes."
+        urgency_line = f"Elevated physical risk ({risk_score:.1f}/100) indicates accelerating operational wear requiring preventive intervention."
+        safety_line = "Standard high-voltage PPE category 4; observe safety distance from energized high-voltage bushings."
+    elif risk_score >= 40.0 or risk_level == "MEDIUM":
+        crew_line = "Regional Substation Inspection Technician assigned to routine preventive check."
+        prepos_line = "No emergency pre-positioning required. Schedule visual verification during standard maintenance round."
+        equipment_line = "Handheld infrared thermometer, vibration vibrometer, oil sampling syringes."
+        spares_line = "Standard consumable gaskets and filter cartridges."
+        urgency_line = f"Moderate risk level ({risk_score:.1f}/100) with stable short-term telemetry trends."
+        safety_line = "Standard utility safety protocols for live substation yard entry."
+    else:
+        crew_line = "No crew deployment required; autonomous SCADA telemetry supervision active."
+        prepos_line = "No crew pre-positioning necessary."
+        equipment_line = "Standard telemetry sensors operational."
+        spares_line = "None required."
+        urgency_line = f"Nominal baseline condition ({risk_score:.1f}/100); all operational indicators within safe envelopes."
+        safety_line = "Normal automated monitoring protocols."
+
+    engine_name = "IBM Granite 3.0 — Live" if is_live_granite else "IBM Granite 3.0 — Template Fallback"
+
+    return {
+        "asset": {
+            "id": transformer_id,
+            "name": transformer_id,
+            "model": model,
+            "location": location,
+            "substation_name": location,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+        },
+        "engine": engine_name,
+        "is_live_granite": is_live_granite,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "dga": {
+            "status": dga.get("status", "Condition 1 (Nominal Standards-Informed Envelope)"),
+            "primary_risk_factor": dga.get("primary_risk_factor", "Normal"),
+            "c2h2_ppm": c2h2,
+            "c2h4_ppm": c2h4,
+            "h2_ppm": h2,
+            "ch4_ppm": ch4,
+        },
+        "telemetry": {
+            "oil_temperature_c": oil_temp,
+            "vibration_mms": vibration,
+            "load_percent": load_pct,
+        },
+        "weather": {
+            "temperature_c": w_temp,
+            "wind_gust_kmh": w_gust,
+            "stress_multiplier": w_mult,
+            "source": w_source,
+            "event_name": event_name,
+        },
+        "grid_impact": {
+            "customers_affected": customers,
+            "critical_infrastructure": infra,
+        },
+        "historical_context": {
+            "incident_count": incident_count,
+        },
+        "recommendations": recommendations,
+        "crew": {
+            "deployment": crew_line,
+            "pre_positioning": prepos_line,
+            "diagnostic_equipment": equipment_line,
+            "spare_parts": spares_line,
+            "deployment_required": risk_score >= 40.0,
+            "pre_positioning_required": risk_score >= 60.0,
+        },
+        "safety_and_urgency": {
+            "urgency_level": risk_level,
+            "reason": urgency_line,
+            "safety": safety_line,
+        },
+        "human_review": {
+            "mandate": "AI-assisted operational recommendation — final field action requires certified operator review and digital countersignature.",
+            "status": "Awaiting Review",
+            "review_required": True,
+        },
+    }
+
+
 def generate_granite_directive_payload(
     risk_context_or_asset: Dict[str, Any],
     weather: Optional[Dict[str, Any]] = None,
@@ -549,6 +782,7 @@ def generate_granite_directive_payload(
 
     now_iso = datetime.now(timezone.utc).isoformat()
     engine_name = "IBM Granite 3.0 — Live" if is_live_granite else "IBM Granite 3.0 — Template Fallback"
+    structured_directive = build_structured_directive_object(ctx, is_live_granite)
 
     return {
         "transformer_id": ctx["transformer_id"],
@@ -561,6 +795,7 @@ def generate_granite_directive_payload(
         "directive_text": directive_text,
         "work_order_directive": directive_text,
         "recommended_intervention": _formulate_dynamic_intervention(ctx),
+        "structured_directive": structured_directive,
         "is_live_granite": is_live_granite,
         "engine": engine_name,
         "directive_generated_at": now_iso,

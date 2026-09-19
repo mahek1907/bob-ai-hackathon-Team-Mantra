@@ -12,12 +12,15 @@ import {
   UserCheck,
   Send
 } from 'lucide-react';
+import StructuredDirectiveConsole from './StructuredDirectiveConsole';
 
 export default function WorkOrderModal({
   isOpen,
   onClose,
   asset,
   directive,
+  structuredDirective = null,
+  weather = {},
   isLoading,
   isLiveGranite,
   engineName,
@@ -145,45 +148,18 @@ export default function WorkOrderModal({
             </div>
           ) : (
             <>
-              {/* Asset Risk Summary Header */}
-              <div className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 animate-fade-in-up">
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs font-mono font-semibold px-2.5 py-1 rounded border ${
-                    asset.risk_category === 'CRITICAL'
-                      ? 'bg-red-50 text-red-700 border-red-200'
-                      : asset.risk_category === 'HIGH'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : asset.risk_category === 'MEDIUM'
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  }`}>
-                    {asset.risk_category} PRIORITY ({asset.composite_risk_score}/100)
-                  </span>
-                  <span className="text-xs text-slate-600 font-medium">
-                    Serves <strong className="text-slate-900 font-semibold">{(asset.customers_served || 0).toLocaleString()} customers</strong>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition-colors cursor-pointer"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
-                  <button
-                    onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Export</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Work Order Content Display */}
-              <div className="p-4 rounded-lg bg-slate-900 text-slate-100 border border-slate-800 text-xs font-mono whitespace-pre-wrap leading-relaxed shadow-xs animate-fade-in-up">
-                {directive}
+              {/* Structured Operations Console Directive */}
+              <div className="animate-fade-in-up">
+                <StructuredDirectiveConsole
+                  directive={directive}
+                  structuredDirective={structuredDirective}
+                  asset={asset}
+                  weather={weather}
+                  isLiveGranite={isLiveGranite}
+                  engineName={engineName}
+                  signOffResult={signOffResult}
+                  isModal={true}
+                />
               </div>
 
               {/* Human-in-the-loop Sign-Off Section */}

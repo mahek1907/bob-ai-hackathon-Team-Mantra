@@ -273,3 +273,90 @@ class TestDynamicDirective:
                         break
 
                 assert received_update is True
+
+    def test_structured_directive_payload_structure(self):
+        """
+        Test 5:
+        Verify that generate_granite_directive_payload attaches a structured_directive
+        object formatted specifically for the Grid Operations Console Action Card UI.
+        Assert that recommendations are numbered cards with step, title, description, urgency,
+        and that diagnostic sections (DGA, SCADA, weather, grid impact) contain live values.
+        """
+        # Test CRITICAL arcing asset
+        ctx_critical = build_structured_risk_context({
+            "asset_id": "TX-401",
+            "model": "Siemens 345kV/138kV 400MVA Autotransformer",
+            "substation_name": "Metro Central Transit Substation",
+            "composite_risk_score": 88.0,
+            "risk_category": "CRITICAL",
+            "oil_temp_c": 115.0,
+            "vibration_mms": 10.5,
+            "load_pct": 96.0,
+            "dga_ppm": {"acetylene": 85.0, "ethylene": 240.0, "hydrogen": 310.0, "methane": 180.0},
+            "customers_served": 85000,
+            "transit_connected": True,
+        }, weather={
+            "ambient_temp_c": 38.5,
+            "wind_speed_kmh": 65.0,
+            "event_name": "Severe Heatwave & Gale",
+            "source": "Open-Meteo Live"
+        })
+
+        payload_crit = generate_granite_directive_payload(ctx_critical)
+        assert "structured_directive" in payload_crit
+        sd = payload_crit["structured_directive"]
+
+        assert sd["asset"]["id"] == "TX-401"
+        assert sd["asset"]["risk_score"] == 88.0
+        assert sd["asset"]["risk_level"] == "CRITICAL"
+
+        # Check DGA live values
+        assert sd["dga"]["c2h2_ppm"] == 85.0
+        assert sd["dga"]["c2h4_ppm"] == 240.0
+        assert sd["telemetry"]["oil_temperature_c"] == 115.0
+        assert sd["telemetry"]["load_percent"] == 96.0
+        assert sd["weather"]["wind_gust_kmh"] == 65.0
+
+        # Check action recommendations
+        recs = sd["recommendations"]
+        assert len(recs) >= 2
+        assert recs[0]["step"] == 1
+        assert "ARCING" in recs[0]["title"]
+        assert recs[0]["urgency"] == "CRITICAL"
+        assert recs[1]["step"] == 2
+        assert "OFFLOADING" in recs[1]["title"] or "LOAD" in recs[1]["title"]
+
+        # Check crew and human review
+        assert sd["crew"]["deployment_required"] is True
+        assert "Crew #3" in sd["crew"]["deployment"]
+        assert sd["human_review"]["review_required"] is True
+        assert "Awaiting Review" in sd["human_review"]["status"]
+
+        # Test LOW risk asset (e.g. TX-205 nominal)
+        ctx_low = build_structured_risk_context({
+            "asset_id": "TX-205",
+            "model": "ABB 230kV/69kV 150MVA Step-Down Transformer",
+            "substation_name": "West Ridge Bulk Substation",
+            "composite_risk_score": 18.5,
+            "risk_category": "LOW",
+            "oil_temp_c": 58.0,
+            "vibration_mms": 1.4,
+            "load_pct": 52.0,
+            "dga_ppm": {"acetylene": 0.0, "ethylene": 5.0, "hydrogen": 12.0, "methane": 8.0},
+            "customers_served": 32000,
+        }, weather={
+            "ambient_temp_c": 22.0,
+            "wind_speed_kmh": 12.0,
+            "event_name": "Clear Conditions",
+            "source": "Open-Meteo Live"
+        })
+
+        payload_low = generate_granite_directive_payload(ctx_low)
+        sd_low = payload_low["structured_directive"]
+        assert sd_low["asset"]["id"] == "TX-205"
+        assert sd_low["asset"]["risk_level"] == "LOW"
+        assert sd_low["crew"]["deployment_required"] is False
+        assert len(sd_low["recommendations"]) >= 2
+        assert "SUPERVISION" in sd_low["recommendations"][0]["title"]
+        assert sd_low["recommendations"][0]["urgency"] == "ROUTINE"
+
